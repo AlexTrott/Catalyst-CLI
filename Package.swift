@@ -98,12 +98,19 @@ let package = Package(
             name: "MicroAppGenerator",
             dependencies: [
                 "TemplateEngine",
+                "AppIconGenerator",
                 .product(name: "PathKit", package: "PathKit"),
                 .product(name: "Files", package: "Files"),
                 .product(name: "Yams", package: "Yams"),
                 .product(name: "XcodeGenKit", package: "XcodeGen"),
                 .product(name: "ProjectSpec", package: "XcodeGen")
             ]
+        ),
+
+        // App Icon Generator module
+        .target(
+            name: "AppIconGenerator",
+            dependencies: []
         ),
 
         // Package Generator module

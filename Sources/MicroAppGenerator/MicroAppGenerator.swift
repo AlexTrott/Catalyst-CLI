@@ -7,6 +7,7 @@ import XcodeGenKit
 import ProjectSpec
 import WorkspaceManager
 import Utilities
+import AppIconGenerator
 
 /// Generates complete iOS MicroApps for isolated feature testing.
 ///
@@ -41,10 +42,12 @@ import Utilities
 public class MicroAppGenerator {
     private let templateEngine: TemplateEngine
     private let fileManager: FileManager
+    private let iconGenerator: AppIconGenerator
 
     public init(templateEngine: TemplateEngine = TemplateEngine()) {
         self.templateEngine = templateEngine
         self.fileManager = FileManager.default
+        self.iconGenerator = AppIconGenerator()
     }
 
     /// Generate a MicroApp for a Feature Module.
@@ -76,7 +79,7 @@ public class MicroAppGenerator {
         try generateInfoPlist(configuration, at: microAppPath)
 
         // Create Assets and Resources
-        try createAssetsDirectory(at: microAppPath)
+        try createAssetsDirectory(configuration, at: microAppPath)
         try generateLaunchScreen(configuration, at: microAppPath)
 
         // Generate Xcode project using XcodeGen (if available)
@@ -116,6 +119,7 @@ public class MicroAppGenerator {
             deploymentTarget: "16.0"
             sources:
               - \(configuration.featureName)App
+              - Assets.xcassets
             dependencies:
               - package: \(configuration.featureName)
             info:
@@ -364,7 +368,7 @@ public class MicroAppGenerator {
 
     // MARK: - Assets and Resources
 
-    private func createAssetsDirectory(at path: Path) throws {
+    private func createAssetsDirectory(_ configuration: MicroAppConfiguration, at path: Path) throws {
         let assetsPath = path + "Assets.xcassets"
         try assetsPath.mkpath()
 
@@ -372,104 +376,34 @@ public class MicroAppGenerator {
         let appIconPath = assetsPath + "AppIcon.appiconset"
         try appIconPath.mkpath()
 
-        let appIconContents = """
-        {
-          "images" : [
+        // Generate pig emoji app icons
+        do {
+            try iconGenerator.generateAppIcons(
+                at: appIconPath.url,
+                featureName: configuration.featureName
+            )
+            print("🐷 Generated random pig emoji app icons for \(configuration.featureName)")
+        } catch {
+            // Fall back to empty icon set if generation fails
+            print("⚠️ Could not generate pig emoji icons, using default empty icon set")
+            let fallbackContents = """
             {
-              "idiom" : "iphone",
-              "scale" : "2x",
-              "size" : "20x20"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "3x",
-              "size" : "20x20"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "2x",
-              "size" : "29x29"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "3x",
-              "size" : "29x29"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "2x",
-              "size" : "40x40"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "3x",
-              "size" : "40x40"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "2x",
-              "size" : "60x60"
-            },
-            {
-              "idiom" : "iphone",
-              "scale" : "3x",
-              "size" : "60x60"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "1x",
-              "size" : "20x20"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "2x",
-              "size" : "20x20"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "1x",
-              "size" : "29x29"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "2x",
-              "size" : "29x29"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "1x",
-              "size" : "40x40"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "2x",
-              "size" : "40x40"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "2x",
-              "size" : "76x76"
-            },
-            {
-              "idiom" : "ipad",
-              "scale" : "2x",
-              "size" : "83.5x83.5"
-            },
-            {
-              "idiom" : "ios-marketing",
-              "scale" : "1x",
-              "size" : "1024x1024"
+              "images" : [
+                {
+                  "idiom" : "universal",
+                  "platform" : "ios",
+                  "size" : "1024x1024"
+                }
+              ],
+              "info" : {
+                "author" : "xcode",
+                "version" : 1
+              }
             }
-          ],
-          "info" : {
-            "author" : "xcode",
-            "version" : 1
-          }
+            """
+            let contentsPath = appIconPath + "Contents.json"
+            try fallbackContents.write(to: contentsPath.url, atomically: true, encoding: .utf8)
         }
-        """
-
-        let contentsPath = appIconPath + "Contents.json"
-        try appIconContents.write(to: contentsPath.url, atomically: true, encoding: .utf8)
 
         // Create AccentColor.colorset
         let accentColorPath = assetsPath + "AccentColor.colorset"
