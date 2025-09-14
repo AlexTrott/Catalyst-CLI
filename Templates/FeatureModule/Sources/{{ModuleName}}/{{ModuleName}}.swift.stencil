@@ -1,0 +1,68 @@
+//
+//  {{ModuleName}}.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+import UIKit
+import SwiftUI
+
+/// Main interface for the {{ModuleName}} feature module
+///
+/// This module provides UI components and navigation flow for {{ModuleName|snakeCase|replace:"_":" "|capitalize}} functionality.
+public struct {{ModuleName}} {
+
+    /// Create the main view controller for this feature
+    ///
+    /// - Parameter coordinator: Optional coordinator for navigation
+    /// - Returns: Configured view controller
+    public static func createViewController(coordinator: {{ModuleName}}CoordinatorProtocol? = nil) -> UIViewController {
+        let viewModel = {{ModuleName}}ViewModel()
+        let viewController = {{ModuleName}}ViewController(viewModel: viewModel)
+
+        if let coordinator = coordinator {
+            viewController.coordinator = coordinator
+        }
+
+        return viewController
+    }
+
+    /// Create the main SwiftUI view for this feature
+    ///
+    /// - Parameter coordinator: Optional coordinator for navigation
+    /// - Returns: Configured SwiftUI view
+    public static func createSwiftUIView(coordinator: {{ModuleName}}CoordinatorProtocol? = nil) -> some View {
+        let viewModel = {{ModuleName}}ViewModel()
+        return {{ModuleName}}View(viewModel: viewModel, coordinator: coordinator)
+    }
+
+    /// Create a coordinator for this feature
+    ///
+    /// - Parameter navigationController: The navigation controller to use
+    /// - Returns: Configured coordinator
+    public static func createCoordinator(navigationController: UINavigationController) -> {{ModuleName}}CoordinatorProtocol {
+        return {{ModuleName}}Coordinator(navigationController: navigationController)
+    }
+
+    /// Configuration for the feature
+    public struct Configuration {
+        public let showsNavigationBar: Bool
+        public let allowsEditing: Bool
+        public let theme: Theme
+
+        public init(showsNavigationBar: Bool = true, allowsEditing: Bool = true, theme: Theme = .default) {
+            self.showsNavigationBar = showsNavigationBar
+            self.allowsEditing = allowsEditing
+            self.theme = theme
+        }
+
+        public enum Theme {
+            case `default`
+            case dark
+            case light
+        }
+    }
+}

@@ -1,0 +1,93 @@
+//
+//  {{ModuleName}}Service.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+/// Core service for {{ModuleName}} business logic
+///
+/// This service handles the main business operations for the {{ModuleName}} module.
+/// It should be stateless and thread-safe.
+public class {{ModuleName}}Service {
+
+    private var configuration: {{ModuleName}}Configuration?
+
+    /// Initialize the service
+    public init() {}
+
+    /// Configure the service with given configuration
+    ///
+    /// - Parameter config: The configuration to use
+    public func configure(with config: {{ModuleName}}Configuration) {
+        self.configuration = config
+    }
+
+    /// Perform the main operation of this service
+    ///
+    /// - Returns: Result of the operation
+    /// - Throws: {{ModuleName}}Error if operation fails
+    public func performOperation() async throws -> {{ModuleName}}Result {
+        guard let config = configuration else {
+            throw {{ModuleName}}Error.notConfigured
+        }
+
+        // TODO: Implement your core business logic here
+
+        // Example implementation
+        switch config.environment {
+        case .development:
+            return {{ModuleName}}Result(
+                isSuccess: true,
+                message: "Development operation completed",
+                data: ["environment": "development"]
+            )
+        case .staging:
+            return {{ModuleName}}Result(
+                isSuccess: true,
+                message: "Staging operation completed",
+                data: ["environment": "staging"]
+            )
+        case .production:
+            // Simulate async work
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+
+            return {{ModuleName}}Result(
+                isSuccess: true,
+                message: "Production operation completed successfully",
+                data: ["environment": "production", "timestamp": Date().timeIntervalSince1970]
+            )
+        }
+    }
+
+    /// Validate the current configuration
+    ///
+    /// - Returns: True if configuration is valid
+    public func validateConfiguration() -> Bool {
+        return configuration != nil
+    }
+}
+
+/// Errors that can occur in {{ModuleName}} operations
+public enum {{ModuleName}}Error: LocalizedError {
+    case notConfigured
+    case invalidInput(String)
+    case operationFailed(String)
+    case networkError(Error)
+
+    public var errorDescription: String? {
+        switch self {
+        case .notConfigured:
+            return "{{ModuleName}} service is not configured. Call configure(with:) first."
+        case .invalidInput(let message):
+            return "Invalid input: \(message)"
+        case .operationFailed(let reason):
+            return "Operation failed: \(reason)"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        }
+    }
+}

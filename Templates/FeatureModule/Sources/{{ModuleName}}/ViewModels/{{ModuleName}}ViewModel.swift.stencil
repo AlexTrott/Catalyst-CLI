@@ -1,0 +1,176 @@
+//
+//  {{ModuleName}}ViewModel.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+import Combine
+
+/// ViewModel for {{ModuleName}} feature
+@MainActor
+public class {{ModuleName}}ViewModel: ObservableObject {
+
+    // MARK: - Published Properties
+
+    @Published public var items: [{{ModuleName}}Item] = []
+    @Published public var isLoading: Bool = false
+    @Published public var errorMessage: String?
+    @Published public var selectedItem: {{ModuleName}}Item?
+
+    // MARK: - Private Properties
+
+    private var cancellables = Set<AnyCancellable>()
+    private let service: {{ModuleName}}ServiceProtocol
+
+    // MARK: - Initialization
+
+    public init(service: {{ModuleName}}ServiceProtocol = {{ModuleName}}Service()) {
+        self.service = service
+        setupBindings()
+        loadInitialData()
+    }
+
+    // MARK: - Public Methods
+
+    /// Refresh the data
+    public func refresh() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let newItems = try await service.fetchItems()
+            items = newItems
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    /// Add a new item
+    public func addNewItem() {
+        let newItem = {{ModuleName}}Item(
+            title: "New Item \(items.count + 1)",
+            subtitle: "Created at \(Date().formatted(date: .abbreviated, time: .shortened))"
+        )
+
+        items.append(newItem)
+
+        // Simulate saving to backend
+        Task {
+            do {
+                try await service.saveItem(newItem)
+            } catch {
+                // Handle error - maybe remove from local list or show error
+                errorMessage = "Failed to save item: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Select an item
+    public func selectItem(_ item: {{ModuleName}}Item) {
+        selectedItem = item
+        // TODO: Navigate to detail view or perform action
+    }
+
+    /// Delete an item
+    public func deleteItem(_ item: {{ModuleName}}Item) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+
+        items.remove(at: index)
+
+        // Simulate deletion from backend
+        Task {
+            do {
+                try await service.deleteItem(item)
+            } catch {
+                // Re-add item on error
+                items.insert(item, at: index)
+                errorMessage = "Failed to delete item: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Clear any error message
+    public func clearError() {
+        errorMessage = nil
+    }
+
+    // MARK: - Private Methods
+
+    private func setupBindings() {
+        // Add any Combine bindings here
+        $selectedItem
+            .sink { selectedItem in
+                // Handle selection changes
+                print("Selected item: \(selectedItem?.title ?? "none")")
+            }
+            .store(in: &cancellables)
+    }
+
+    private func loadInitialData() {
+        Task {
+            await refresh()
+        }
+    }
+}
+
+// MARK: - Supporting Types
+
+/// Data model for {{ModuleName}} items
+public struct {{ModuleName}}Item: Identifiable, Equatable {
+    public let id = UUID()
+    public let title: String
+    public let subtitle: String?
+    public let createdAt: Date
+
+    public init(title: String, subtitle: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.createdAt = Date()
+    }
+}
+
+/// Service protocol for {{ModuleName}} operations
+public protocol {{ModuleName}}ServiceProtocol {
+    func fetchItems() async throws -> [{{ModuleName}}Item]
+    func saveItem(_ item: {{ModuleName}}Item) async throws
+    func deleteItem(_ item: {{ModuleName}}Item) async throws
+}
+
+/// Default implementation of {{ModuleName}}ServiceProtocol
+public class {{ModuleName}}Service: {{ModuleName}}ServiceProtocol {
+
+    public init() {}
+
+    public func fetchItems() async throws -> [{{ModuleName}}Item] {
+        // Simulate network delay
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+        // Return mock data
+        return [
+            {{ModuleName}}Item(title: "Sample Item 1", subtitle: "This is a sample item"),
+            {{ModuleName}}Item(title: "Sample Item 2", subtitle: "Another sample item"),
+            {{ModuleName}}Item(title: "Sample Item 3", subtitle: nil)
+        ]
+    }
+
+    public func saveItem(_ item: {{ModuleName}}Item) async throws {
+        // Simulate network delay
+        try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+
+        // TODO: Implement actual save logic
+        print("Saved item: \(item.title)")
+    }
+
+    public func deleteItem(_ item: {{ModuleName}}Item) async throws {
+        // Simulate network delay
+        try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+
+        // TODO: Implement actual delete logic
+        print("Deleted item: \(item.title)")
+    }
+}

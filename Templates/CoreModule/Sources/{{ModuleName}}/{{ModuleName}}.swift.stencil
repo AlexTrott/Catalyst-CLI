@@ -1,0 +1,73 @@
+//
+//  {{ModuleName}}.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+/// Main interface for the {{ModuleName}} core module
+///
+/// This module provides core business logic and services for {{ModuleName|snakeCase|replace:"_":" "|capitalize}} functionality.
+public struct {{ModuleName}} {
+
+    /// Shared instance for convenient access
+    public static let shared = {{ModuleName}}()
+
+    /// Private initializer to encourage shared instance usage
+    private init() {}
+
+    /// Public initializer for dependency injection scenarios
+    public init(service: {{ModuleName}}Service) {
+        self.service = service
+    }
+
+    /// The service instance handling core operations
+    private let service: {{ModuleName}}Service = {{ModuleName}}Service()
+
+    /// Example method - replace with your actual core functionality
+    ///
+    /// - Returns: A result indicating success or failure
+    public func performCoreOperation() async throws -> {{ModuleName}}Result {
+        return try await service.performOperation()
+    }
+
+    /// Configuration method for module setup
+    ///
+    /// - Parameter config: Configuration options
+    public func configure(with config: {{ModuleName}}Configuration) {
+        service.configure(with: config)
+    }
+}
+
+/// Result type for {{ModuleName}} operations
+public struct {{ModuleName}}Result {
+    public let isSuccess: Bool
+    public let message: String
+    public let data: [String: Any]?
+
+    public init(isSuccess: Bool, message: String, data: [String: Any]? = nil) {
+        self.isSuccess = isSuccess
+        self.message = message
+        self.data = data
+    }
+}
+
+/// Configuration for {{ModuleName}} module
+public struct {{ModuleName}}Configuration {
+    public let environment: Environment
+    public let options: [String: Any]
+
+    public init(environment: Environment = .production, options: [String: Any] = [:]) {
+        self.environment = environment
+        self.options = options
+    }
+
+    public enum Environment {
+        case development
+        case staging
+        case production
+    }
+}

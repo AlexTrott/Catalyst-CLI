@@ -1,0 +1,135 @@
+//
+//  {{ModuleName}}Model.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+/// Core data model for {{ModuleName}}
+public struct {{ModuleName}}Model: Codable, Equatable, Identifiable {
+
+    /// Unique identifier for the model
+    public let id: UUID
+
+    /// Name or title of the {{ModuleName|snakeCase|replace:"_":" "}}
+    public var name: String
+
+    /// Description of the {{ModuleName|snakeCase|replace:"_":" "}}
+    public var description: String?
+
+    /// Creation timestamp
+    public let createdAt: Date
+
+    /// Last modification timestamp
+    public var updatedAt: Date
+
+    /// Status of the {{ModuleName|snakeCase|replace:"_":" "}}
+    public var status: Status
+
+    /// Additional metadata
+    public var metadata: [String: String]
+
+    /// Initialize a new {{ModuleName}}Model
+    ///
+    /// - Parameters:
+    ///   - name: Name of the {{ModuleName|snakeCase|replace:"_":" "}}
+    ///   - description: Optional description
+    ///   - status: Initial status (defaults to active)
+    ///   - metadata: Additional metadata
+    public init(
+        name: String,
+        description: String? = nil,
+        status: Status = .active,
+        metadata: [String: String] = [:]
+    ) {
+        self.id = UUID()
+        self.name = name
+        self.description = description
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.status = status
+        self.metadata = metadata
+    }
+
+    /// Update the model with new information
+    ///
+    /// - Parameters:
+    ///   - name: New name (optional)
+    ///   - description: New description (optional)
+    ///   - status: New status (optional)
+    ///   - metadata: Additional metadata to merge
+    public mutating func update(
+        name: String? = nil,
+        description: String? = nil,
+        status: Status? = nil,
+        metadata: [String: String]? = nil
+    ) {
+        if let name = name {
+            self.name = name
+        }
+        if let description = description {
+            self.description = description
+        }
+        if let status = status {
+            self.status = status
+        }
+        if let metadata = metadata {
+            self.metadata.merge(metadata) { _, new in new }
+        }
+        self.updatedAt = Date()
+    }
+
+    /// Status enumeration for {{ModuleName}}Model
+    public enum Status: String, Codable, CaseIterable {
+        case active
+        case inactive
+        case pending
+        case archived
+
+        public var displayName: String {
+            switch self {
+            case .active:
+                return "Active"
+            case .inactive:
+                return "Inactive"
+            case .pending:
+                return "Pending"
+            case .archived:
+                return "Archived"
+            }
+        }
+    }
+}
+
+// MARK: - Model Extensions
+
+public extension {{ModuleName}}Model {
+
+    /// Check if the model is currently active
+    var isActive: Bool {
+        return status == .active
+    }
+
+    /// Check if the model was recently created (within last 24 hours)
+    var isRecentlyCreated: Bool {
+        let oneDayAgo = Date().addingTimeInterval(-24 * 60 * 60)
+        return createdAt > oneDayAgo
+    }
+
+    /// Check if the model was recently updated (within last hour)
+    var isRecentlyUpdated: Bool {
+        let oneHourAgo = Date().addingTimeInterval(-60 * 60)
+        return updatedAt > oneHourAgo
+    }
+
+    /// Get a formatted string representation of creation date
+    var formattedCreatedAt: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: createdAt)
+    }
+}

@@ -1,0 +1,29 @@
+//
+//  SceneDelegate.swift
+//  {{ModuleName}}App
+//
+//  Created by {% if Author %}{{Author}}{% else %}Catalyst CLI{% endif %} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import UIKit
+import SwiftUI
+import {{ModuleName}}
+
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard let windowScene = (scene as? UIWindowScene) else { return }
+
+        window = UIWindow(windowScene: windowScene)
+
+        // Create the main view for the {{ModuleName}} feature
+        let contentView = {{ModuleName}}.createSwiftUIView()
+        let hostingController = UIHostingController(rootView: contentView)
+
+        window?.rootViewController = hostingController
+        window?.makeKeyAndVisible()
+    }
+}

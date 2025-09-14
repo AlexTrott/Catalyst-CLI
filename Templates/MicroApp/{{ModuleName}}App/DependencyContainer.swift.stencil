@@ -1,0 +1,26 @@
+//
+//  DependencyContainer.swift
+//  {{ModuleName}}App
+//
+//  Created by {% if Author %}{{Author}}{% else %}Catalyst CLI{% endif %} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+import {{ModuleName}}
+
+/// Dependency injection container for the MicroApp
+class DependencyContainer {
+    static let shared = DependencyContainer()
+
+    private init() {}
+
+    /// Configure dependencies for the {{ModuleName}} module
+    func configure() {
+        // Configure any services, repositories, or dependencies
+        // that your {{ModuleName}} module requires
+
+        // Example:
+        // ServiceLocator.register(SomeService.self, instance: SomeServiceImpl())
+    }
+}

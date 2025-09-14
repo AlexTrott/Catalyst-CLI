@@ -1,0 +1,172 @@
+//
+//  {{ModuleName}}View.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import SwiftUI
+
+/// SwiftUI view for {{ModuleName}} feature
+public struct {{ModuleName}}View: View {
+
+    @StateObject private var viewModel: {{ModuleName}}ViewModel
+    private let coordinator: {{ModuleName}}CoordinatorProtocol?
+
+    public init(viewModel: {{ModuleName}}ViewModel, coordinator: {{ModuleName}}CoordinatorProtocol? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+        self.coordinator = coordinator
+    }
+
+    public var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                headerView
+
+                if viewModel.isLoading {
+                    loadingView
+                } else {
+                    contentView
+                }
+
+                Spacer()
+
+                actionButtonsView
+            }
+            .padding()
+            .navigationTitle("{{ModuleName|snakeCase|replace:'_':' '|capitalize}}")
+            .navigationBarTitleDisplayMode(.large)
+            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.clearError()
+                }
+            } message: {
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                }
+            }
+        }
+    }
+
+    private var headerView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "star.circle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+
+            Text("{{ModuleName|snakeCase|replace:'_':' '|capitalize}}")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Welcome to the {{ModuleName|snakeCase|replace:'_':' '}} feature")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var contentView: some View {
+        VStack(spacing: 16) {
+            if viewModel.items.isEmpty {
+                emptyStateView
+            } else {
+                itemsListView
+            }
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "tray")
+                .font(.system(size: 48))
+                .foregroundColor(.gray)
+
+            Text("No items yet")
+                .font(.headline)
+
+            Text("Tap the button below to add your first item")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+    }
+
+    private var itemsListView: some View {
+        List(viewModel.items) { item in
+            {{ModuleName}}ItemRow(item: item) {
+                viewModel.selectItem(item)
+            }
+        }
+        .listStyle(PlainListStyle())
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+
+            Text("Loading...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var actionButtonsView: some View {
+        VStack(spacing: 12) {
+            Button("Add New Item") {
+                viewModel.addNewItem()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(viewModel.isLoading)
+
+            Button("Refresh") {
+                Task {
+                    await viewModel.refresh()
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.isLoading)
+        }
+    }
+}
+
+/// Individual row view for {{ModuleName}} items
+private struct {{ModuleName}}ItemRow: View {
+    let item: {{ModuleName}}Item
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.headline)
+
+                if let subtitle = item.subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.tertiary)
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
+    }
+}
+
+#if DEBUG
+struct {{ModuleName}}View_Previews: PreviewProvider {
+    static var previews: some View {
+        {{ModuleName}}View(viewModel: {{ModuleName}}ViewModel())
+    }
+}
+#endif
