@@ -14,6 +14,7 @@ Catalyst accelerates iOS development by automating the creation of modular Swift
 
 - 🚀 **Rapid Module Creation**: Generate Core and Feature modules in seconds
 - 📱 **Automatic MicroApp Generation**: Feature modules now include companion MicroApps automatically
+- 🔗 **Git Integration**: Auto-prefix commits with JIRA tickets from branch names
 - 🏗️ **Workspace Integration**: Automatically manage Xcode workspaces and projects
 - 🎨 **Customizable Templates**: Use built-in templates or create your own with Stencil templating
 - ⚙️ **Flexible Configuration**: Project-specific and global YAML-based settings
@@ -61,6 +62,9 @@ catalyst new core NetworkingCore
 
 # Create a Feature module with companion MicroApp
 catalyst new feature AuthenticationFeature
+
+# Install git hook for JIRA ticket prefixing
+catalyst install git-message
 ```
 
 ### 3. Configure Defaults (Optional)
@@ -114,6 +118,41 @@ catalyst new feature ExistingFeature --force
 FeatureName/
 ├── FeatureName/        # The Feature Module package
 └── FeatureNameApp/     # The companion MicroApp
+```
+
+### `catalyst install`
+
+Install development tools and workflow enhancements.
+
+```bash
+# Install git hook for automatic JIRA ticket prefixing
+catalyst install git-message
+
+# Preview installation without making changes
+catalyst install git-message --dry-run
+
+# Force overwrite existing hooks
+catalyst install git-message --force
+
+# Verbose output during installation
+catalyst install git-message --verbose
+```
+
+**Git Message Hook:**
+- Automatically prefix commit messages with JIRA tickets from branch names
+- Supports patterns like: `UKFIM-123`, `ABC-999`, `PROJECT-1234`
+- Falls back to `[NO-TICKET]` if no ticket found in branch name
+- Smart handling: skips merges, rebases, and already-prefixed messages
+
+**Examples:**
+```bash
+# Branch: feature/UKFIM-123-new-login
+$ git commit -m "Add OAuth integration"
+# Result: [UKFIM-123] Add OAuth integration
+
+# Branch: hotfix/emergency-fix
+$ git commit -m "Fix critical bug"
+# Result: [NO-TICKET] Fix critical bug
 ```
 
 ### `catalyst list`
@@ -253,6 +292,9 @@ colorOutput: true
 catalyst config set author "Jane Smith"
 catalyst config set organizationName "Acme Corp"
 
+# Install git hooks for better workflow
+catalyst install git-message
+
 # Create modules with your defaults
 catalyst new core DataManager
 catalyst new feature ProductCatalog
@@ -365,19 +407,35 @@ MyApp/
 
 ### Feature Development Workflow
 
-1. Create a new feature with automatic MicroApp:
+1. Set up git hooks for better commit hygiene:
+   ```bash
+   catalyst install git-message
+   ```
+
+2. Create a new feature with automatic MicroApp:
    ```bash
    catalyst new feature ShoppingCart --path ./Features
    ```
 
-2. Navigate to the generated structure:
+3. Navigate to the generated structure:
    ```
    Features/ShoppingCart/
    ├── ShoppingCart/        # Your feature module
    └── ShoppingCartApp/     # Ready-to-run test app
    ```
 
-3. Open the MicroApp's Xcode project to test your feature in isolation:
+4. Work on a properly named branch for automatic ticket prefixing:
+   ```bash
+   git checkout -b feature/SHOP-456-implement-cart-logic
+   ```
+
+5. Your commits will automatically be prefixed:
+   ```bash
+   git commit -m "Add item validation"
+   # Result: [SHOP-456] Add item validation
+   ```
+
+6. Open the MicroApp's Xcode project to test your feature in isolation:
    ```bash
    open Features/ShoppingCart/ShoppingCartApp/ShoppingCartApp.xcodeproj
    ```
@@ -409,6 +467,19 @@ MyApp/
 
 **"Invalid module name"**
 - Module names must start with a letter and contain only alphanumeric characters and underscores
+
+**"Git hook already exists"**
+- Use `catalyst install git-message --force` to overwrite existing hooks
+- Catalyst will automatically backup your existing hook
+
+**"Not a git repository"**
+- Navigate to a git repository or run `git init` first
+- Git hooks can only be installed in git repositories
+
+**"JIRA tickets not being detected"**
+- Ensure branch names contain patterns like `ABC-123`, `PROJECT-456`
+- Tickets must be uppercase letters followed by hyphen and numbers
+- Use `[NO-TICKET]` branches for commits without associated tickets
 
 ### Getting Help
 

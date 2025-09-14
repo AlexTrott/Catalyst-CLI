@@ -26,6 +26,7 @@ import Utilities
 /// - ``ConfigCommand``: Manage configuration settings
 /// - ``TemplateCommand``: Manage templates for module generation
 /// - ``MicroAppCommand``: Create and manage MicroApps (deprecated - use `new feature` instead)
+/// - ``InstallCommand``: Install development tools and git hooks
 /// - ``DoctorCommand``: Diagnose and validate environment
 @main
 struct Catalyst: AsyncParsableCommand {
@@ -40,6 +41,7 @@ struct Catalyst: AsyncParsableCommand {
         Examples:
           catalyst new core NetworkingCore
           catalyst new feature AuthenticationFeature  # Creates both module and MicroApp
+          catalyst install git-message                # Install JIRA ticket git hook
           catalyst list --verbose
           catalyst doctor
           catalyst config set author "John Doe"
@@ -47,6 +49,7 @@ struct Catalyst: AsyncParsableCommand {
         version: "1.0.0",
         subcommands: [
             NewCommand.self,
+            InstallCommand.self,
             MicroAppCommand.self,
             ListCommand.self,
             ConfigCommand.self,
@@ -66,6 +69,7 @@ struct Catalyst: AsyncParsableCommand {
         🚀 Quick Start:
         • catalyst new feature MyFeature  # Creates feature + MicroApp
         • catalyst new core MyCore        # Creates core module
+        • catalyst install git-message    # Auto-prefix commits with JIRA tickets
         • catalyst doctor                 # Check your environment
         • catalyst --help                 # See all commands
         """, style: .rounded)
