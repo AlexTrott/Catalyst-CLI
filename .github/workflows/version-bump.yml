@@ -173,6 +173,7 @@ jobs:
             const currentVersion = '${{ steps.current-version.outputs.current_version }}';
             const versionType = '${{ github.event.inputs.version_type }}';
             const isCustom = '${{ github.event.inputs.custom_version }}' !== '';
+            const createRelease = '${{ github.event.inputs.create_release }}' === 'true';
 
             // Create branch
             const branchName = `version-bump-${newVersion}`;
@@ -209,7 +210,7 @@ jobs:
 
             ### Next Steps
             - [ ] Review and edit CHANGELOG.md to add specific changes
-            - [ ] Merge this PR to trigger release workflow ${github.event.inputs.create_release ? '(auto-release enabled)' : '(auto-release disabled)'}
+            - [ ] Merge this PR to trigger release workflow ${createRelease ? '(auto-release enabled)' : '(auto-release disabled)'}
 
             ---
             *This PR was created automatically by the Version Bump workflow.*
