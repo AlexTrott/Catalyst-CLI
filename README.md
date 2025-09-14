@@ -5,6 +5,8 @@ A modern Swift CLI tool for iOS module generation and management.
 [![Swift](https://img.shields.io/badge/Swift-6.0+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2015+-blue.svg)](https://developer.apple.com/macos/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/alextrott/Catalyst-CLI)](https://github.com/alextrott/Catalyst-CLI/releases)
+[![Downloads](https://img.shields.io/github/downloads/alextrott/Catalyst-CLI/total)](https://github.com/alextrott/Catalyst-CLI/releases)
 
 ## Overview
 
@@ -24,17 +26,39 @@ Catalyst accelerates iOS development by automating the creation of modular Swift
 
 ## Installation
 
-### Prerequisites
-
-- macOS 15.0+
-- Xcode 16.0+
-- Swift 6.0+
-
-### Install from Source
+### Quick Install (Recommended)
 
 ```bash
-git clone https://github.com/[org]/catalyst-cli.git
-cd catalyst-cli
+curl -sSL https://raw.githubusercontent.com/alextrott/Catalyst-CLI/main/install.sh | bash
+```
+
+This script will:
+- ✅ Auto-detect your Mac architecture (Intel/Apple Silicon)
+- ✅ Download and verify the latest release binary
+- ✅ Install to `/usr/local/bin` or `~/.local/bin`
+- ✅ Update your shell configuration
+- ✅ Verify the installation works
+
+### Manual Installation
+
+#### Download Pre-built Binary
+
+1. Visit [Releases](https://github.com/alextrott/Catalyst-CLI/releases)
+2. Download the appropriate binary for your system:
+   - **Apple Silicon (M1/M2/M3)**: `catalyst-*-arm64-apple-macos.tar.gz`
+   - **Intel Mac**: `catalyst-*-x86_64-apple-macos.tar.gz`
+3. Extract and install:
+
+```bash
+tar -xzf catalyst-*.tar.gz
+sudo mv catalyst /usr/local/bin/
+```
+
+#### Install from Source
+
+```bash
+git clone https://github.com/alextrott/Catalyst-CLI.git
+cd Catalyst-CLI
 swift build -c release
 sudo cp .build/release/catalyst /usr/local/bin/
 ```
@@ -44,6 +68,35 @@ sudo cp .build/release/catalyst /usr/local/bin/
 ```bash
 catalyst --version
 catalyst doctor  # Run diagnostics
+```
+
+### Prerequisites
+
+- macOS 15.0+
+- Xcode 16.0+ (for development only)
+- Swift 6.0+ (for building from source only)
+
+### Updating
+
+To update to the latest version:
+
+```bash
+# Using the install script
+curl -sSL https://raw.githubusercontent.com/alextrott/Catalyst-CLI/main/install.sh | bash
+
+# Or manually download the latest release
+```
+
+### Uninstalling
+
+```bash
+# Remove binary
+sudo rm /usr/local/bin/catalyst
+# Or if installed in user directory
+rm ~/.local/bin/catalyst
+
+# Remove configuration (optional)
+rm -rf ~/.catalyst.yml
 ```
 
 ## Quick Start
@@ -546,9 +599,24 @@ catalyst doctor --verbose
 ### Building from Source
 
 ```bash
-git clone https://github.com/[org]/catalyst-cli.git
-cd catalyst-cli
+git clone https://github.com/alextrott/Catalyst-CLI.git
+cd Catalyst-CLI
 swift build
+```
+
+### Building Release Binaries
+
+Use the included build script to create release binaries:
+
+```bash
+# Build for current architecture
+./scripts/build-release.sh
+
+# Build for all supported architectures
+./scripts/build-release.sh --arch all
+
+# Build with specific version
+./scripts/build-release.sh --version v1.0.0
 ```
 
 ### Running Tests
