@@ -207,7 +207,7 @@ public enum Console {
 
     public static func printBoxed(_ message: String, style: BoxStyle = .rounded) {
         let lines = message.components(separatedBy: .newlines)
-        let maxLength = lines.map { $0.count }.max() ?? 0
+        let maxLength = lines.map { visualLength($0) }.max() ?? 0
         let padding = 2
 
         let (topLeft, topRight, bottomLeft, bottomRight, horizontal, vertical) = style.characters
@@ -217,12 +217,28 @@ public enum Console {
 
         // Content lines
         for line in lines {
-            let paddedLine = line.padding(toLength: maxLength, withPad: " ", startingAt: 0)
+            let visualLen = visualLength(line)
+            let spacesToAdd = maxLength - visualLen
+            let paddedLine = line + String(repeating: " ", count: max(0, spacesToAdd))
             Swift.print("\(vertical)\(String(repeating: " ", count: padding))\(paddedLine)\(String(repeating: " ", count: padding))\(vertical)".cyan)
         }
 
         // Bottom border
         Swift.print("\(bottomLeft)\(String(repeating: horizontal, count: maxLength + padding * 2))\(bottomRight)".cyan)
+    }
+
+    private static func visualLength(_ text: String) -> Int {
+        // Calculate the visual length of text, accounting for emojis
+        // Emojis typically take 2 character widths in terminal
+        var length = 0
+        for char in text {
+            if char.unicodeScalars.contains(where: { $0.properties.isEmoji }) {
+                length += 2
+            } else {
+                length += 1
+            }
+        }
+        return length
     }
 
     public static func printRainbow(_ text: String) {
