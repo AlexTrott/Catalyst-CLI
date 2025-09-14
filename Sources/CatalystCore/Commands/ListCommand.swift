@@ -2,6 +2,7 @@ import ArgumentParser
 import Foundation
 import Utilities
 import WorkspaceManager
+import Files
 
 public struct ListCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -27,9 +28,23 @@ public struct ListCommand: AsyncParsableCommand {
     @Flag(name: .long, help: "Show full paths instead of relative paths")
     public var fullPaths: Bool = false
 
+    @Flag(name: .shortAndLong, help: "Search recursively through nested folders")
+    public var recursive: Bool = false
+
+    @Option(name: .long, help: "Base path to search for modules (defaults to current directory)")
+    public var searchPath: String?
+
     public init() {}
 
     public mutating func run() async throws {
+        if recursive {
+            try await runRecursiveSearch()
+        } else {
+            try await runWorkspaceSearch()
+        }
+    }
+
+    private func runWorkspaceSearch() async throws {
         Console.printHeader("Workspace Contents")
 
         guard let workspacePath = FileManager.default.findWorkspace() else {
@@ -54,6 +69,63 @@ public struct ListCommand: AsyncParsableCommand {
 
         } catch {
             throw CatalystError.workspaceModificationFailed("Failed to read workspace: \(error.localizedDescription)")
+        }
+    }
+
+    private func runRecursiveSearch() async throws {
+        Console.printHeader("Recursive Module Search")
+
+        let basePath = searchPath ?? FileManager.default.currentDirectoryPath
+        Console.print("Searching in: \(basePath)", type: .info)
+        Console.newLine()
+
+        let packages = try findPackagesRecursively(in: basePath)
+
+        if packages.isEmpty {
+            Console.print("No Swift packages found", type: .warning)
+            Console.print("Use 'catalyst new' to create your first module", type: .detail)
+            return
+        }
+
+        await displayPackages(packages, workspacePath: basePath)
+    }
+
+    private func findPackagesRecursively(in basePath: String) throws -> [WorkspacePackage] {
+        var packages: [WorkspacePackage] = []
+        let baseURL = URL(fileURLWithPath: basePath)
+
+        try searchDirectory(at: baseURL, packages: &packages, depth: 0)
+
+        return packages.sorted { $0.path < $1.path }
+    }
+
+    private func searchDirectory(at url: URL, packages: inout [WorkspacePackage], depth: Int) throws {
+        // Prevent infinite recursion and overly deep searches
+        guard depth < 10 else { return }
+
+        let fileManager = FileManager.default
+        let contents = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
+
+        for item in contents {
+            let resourceValues = try item.resourceValues(forKeys: [.isDirectoryKey])
+
+            if let isDirectory = resourceValues.isDirectory, isDirectory {
+                // Check if this directory contains Package.swift
+                let packageSwiftPath = item.appendingPathComponent("Package.swift")
+                if fileManager.fileExists(atPath: packageSwiftPath.path) {
+                    let relativePath = item.path.replacingOccurrences(of: url.path + "/", with: "")
+                    let package = WorkspacePackage(
+                        name: item.lastPathComponent,
+                        path: relativePath,
+                        fullPath: item.path,
+                        type: .swiftPackage
+                    )
+                    packages.append(package)
+                }
+
+                // Continue searching recursively in subdirectories
+                try searchDirectory(at: item, packages: &packages, depth: depth + 1)
+            }
         }
     }
 

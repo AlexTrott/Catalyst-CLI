@@ -72,6 +72,30 @@ public class ConfigurationManager {
 
 // MARK: - Configuration Model
 
+public struct ModulePaths: Codable {
+    public var coreModules: String?
+    public var featureModules: String?
+    public var microApps: String?
+
+    public init(
+        coreModules: String? = nil,
+        featureModules: String? = nil,
+        microApps: String? = nil
+    ) {
+        self.coreModules = coreModules
+        self.featureModules = featureModules
+        self.microApps = microApps
+    }
+
+    public static var `default`: ModulePaths {
+        return ModulePaths(
+            coreModules: ".",
+            featureModules: ".",
+            microApps: "./MicroApps"
+        )
+    }
+}
+
 public struct CatalystConfiguration: Codable {
 
     // MARK: - Default Settings
@@ -93,6 +117,7 @@ public struct CatalystConfiguration: Codable {
 
     // MARK: - Path Settings
     public var defaultModulesPath: String?
+    public var paths: ModulePaths
 
     public init(
         author: String? = nil,
@@ -104,7 +129,8 @@ public struct CatalystConfiguration: Codable {
         defaultPlatforms: [String]? = nil,
         verbose: Bool? = nil,
         colorOutput: Bool? = nil,
-        defaultModulesPath: String? = nil
+        defaultModulesPath: String? = nil,
+        paths: ModulePaths = .default
     ) {
         self.author = author
         self.organizationName = organizationName
@@ -116,6 +142,7 @@ public struct CatalystConfiguration: Codable {
         self.verbose = verbose
         self.colorOutput = colorOutput
         self.defaultModulesPath = defaultModulesPath
+        self.paths = paths
     }
 
     /// Default configuration
@@ -141,7 +168,8 @@ public struct CatalystConfiguration: Codable {
             defaultPlatforms: other.defaultPlatforms ?? self.defaultPlatforms,
             verbose: other.verbose ?? self.verbose,
             colorOutput: other.colorOutput ?? self.colorOutput,
-            defaultModulesPath: other.defaultModulesPath ?? self.defaultModulesPath
+            defaultModulesPath: other.defaultModulesPath ?? self.defaultModulesPath,
+            paths: mergedPaths(other.paths)
         )
     }
 
@@ -154,6 +182,14 @@ public struct CatalystConfiguration: Codable {
             merged[key] = value
         }
         return merged
+    }
+
+    private func mergedPaths(_ otherPaths: ModulePaths) -> ModulePaths {
+        return ModulePaths(
+            coreModules: otherPaths.coreModules ?? self.paths.coreModules,
+            featureModules: otherPaths.featureModules ?? self.paths.featureModules,
+            microApps: otherPaths.microApps ?? self.paths.microApps
+        )
     }
 
     /// Get value for a configuration key using dot notation

@@ -37,8 +37,8 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
     @Argument(help: "Name of the Feature Module to create a MicroApp for")
     public var featureName: String
 
-    @Option(name: .shortAndLong, help: "Output directory for the MicroApp")
-    public var output: String = "./MicroApps"
+    @Option(name: .shortAndLong, help: "Output directory for the MicroApp (overrides configured path)")
+    public var output: String?
 
     @Flag(name: .long, help: "Preview what would be created without making changes")
     public var dryRun: Bool = false
@@ -58,10 +58,13 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
         let configManager = ConfigurationManager()
         let config = try configManager.loadConfiguration()
 
+        // Resolve output path from configuration or use explicit path
+        let outputPath = output ?? config.paths.microApps ?? "./MicroApps"
+
         // Create MicroApp configuration
         let microAppConfig = MicroAppConfiguration(
             featureName: featureName,
-            outputPath: output,
+            outputPath: outputPath,
             bundleIdentifier: config.bundleIdentifierPrefix.map { "\($0).\(featureName.lowercased())app" },
             author: config.author,
             organizationName: config.organizationName
@@ -77,13 +80,13 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
 
         // Success message
         Console.printEmoji("✅", message: "MicroApp '\(featureName)App' created successfully!")
-        Console.print("Location: \(output)/\(featureName)App", type: .detail)
+        Console.print("Location: \(outputPath)/\(featureName)App", type: .detail)
 
         // Provide next steps
         Console.newLine()
         Console.print("Next steps:", type: .info)
         Console.printList([
-            "cd \(output)/\(featureName)App",
+            "cd \(outputPath)/\(featureName)App",
             "open \(featureName)App.xcodeproj",
             "Build and run the MicroApp to test your feature"
         ])
@@ -95,10 +98,10 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
         // Check if feature name is valid
         try Validators.validateModuleName(featureName)
 
-        // Check if the feature module exists
-        let featureModulePath = (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(featureName)
-        guard FileManager.default.fileExists(atPath: featureModulePath) else {
-            throw CatalystError.invalidModuleName("Feature module '\(featureName)' not found in current directory")
+        // Find the feature module in configured paths
+        guard let featureModulePath = try findFeatureModule(named: featureName) else {
+            let searchPaths = try getSearchPaths()
+            throw CatalystError.invalidModuleName("Feature module '\(featureName)' not found in search paths: \(searchPaths.joined(separator: ", "))")
         }
 
         // Validate it's a proper Swift package
@@ -111,6 +114,76 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
             Console.print("✓ Feature module found: \(featureName)", type: .detail)
             Console.print("✓ Valid Swift package structure", type: .detail)
         }
+    }
+
+    private func findFeatureModule(named name: String) throws -> String? {
+        let searchPaths = try getSearchPaths()
+
+        for searchPath in searchPaths {
+            // Check direct path
+            let directPath = (searchPath as NSString).appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: directPath) {
+                return directPath
+            }
+
+            // Search recursively in this path
+            if let foundPath = try searchForModule(named: name, in: searchPath) {
+                return foundPath
+            }
+        }
+
+        return nil
+    }
+
+    private func getSearchPaths() throws -> [String] {
+        let configManager = ConfigurationManager()
+        let config = try configManager.loadConfiguration()
+
+        var searchPaths: [String] = []
+
+        // Add feature modules path from config
+        if let featurePath = config.paths.featureModules {
+            searchPaths.append(featurePath)
+        }
+
+        // Add current directory as fallback
+        searchPaths.append(FileManager.default.currentDirectoryPath)
+
+        return Array(Set(searchPaths)) // Remove duplicates
+    }
+
+    private func searchForModule(named name: String, in basePath: String) throws -> String? {
+        let baseURL = URL(fileURLWithPath: basePath)
+        return try searchDirectoryForModule(named: name, at: baseURL, depth: 0)
+    }
+
+    private func searchDirectoryForModule(named name: String, at url: URL, depth: Int) throws -> String? {
+        // Prevent infinite recursion
+        guard depth < 5 else { return nil }
+
+        let fileManager = FileManager.default
+        let contents = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
+
+        for item in contents {
+            let resourceValues = try item.resourceValues(forKeys: [.isDirectoryKey])
+
+            if let isDirectory = resourceValues.isDirectory, isDirectory {
+                // Check if this is the module we're looking for
+                if item.lastPathComponent == name {
+                    let packageSwiftPath = item.appendingPathComponent("Package.swift")
+                    if fileManager.fileExists(atPath: packageSwiftPath.path) {
+                        return item.path
+                    }
+                }
+
+                // Continue searching recursively
+                if let foundPath = try searchDirectoryForModule(named: name, at: item, depth: depth + 1) {
+                    return foundPath
+                }
+            }
+        }
+
+        return nil
     }
 
     private func previewMicroAppCreation(_ configuration: MicroAppConfiguration) throws {

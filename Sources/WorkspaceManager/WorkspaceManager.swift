@@ -220,6 +220,13 @@ public struct WorkspacePackage {
     public let fullPath: String
     public let type: PackageType
 
+    public init(name: String, path: String, fullPath: String, type: PackageType) {
+        self.name = name
+        self.path = path
+        self.fullPath = fullPath
+        self.type = type
+    }
+
     public enum PackageType {
         case swiftPackage
         case xcodeProject

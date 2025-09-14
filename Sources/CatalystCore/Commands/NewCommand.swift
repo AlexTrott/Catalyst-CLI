@@ -6,6 +6,7 @@ import PackageGenerator
 import struct PackageGenerator.ModuleConfiguration
 import enum PackageGenerator.ModuleType
 import WorkspaceManager
+import ConfigurationManager
 
 public struct NewCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -28,8 +29,8 @@ public struct NewCommand: AsyncParsableCommand {
     @Argument(help: "The name of the module")
     public var moduleName: String
 
-    @Option(name: .shortAndLong, help: "The path where the module should be created")
-    public var path: String = "."
+    @Option(name: .shortAndLong, help: "The path where the module should be created (overrides default paths)")
+    public var path: String?
 
     @Option(name: .shortAndLong, help: "The author name for the module")
     public var author: String?
@@ -54,11 +55,14 @@ public struct NewCommand: AsyncParsableCommand {
     public mutating func run() async throws {
         Console.printHeader("Creating New Module")
 
+        // Resolve target path first
+        let targetPath = try resolveTargetPath()
+
         // Validate inputs
-        try validateInputs()
+        try validateInputs(targetPath: targetPath)
 
         // Create module configuration
-        let configuration = try createModuleConfiguration()
+        let configuration = try createModuleConfiguration(targetPath: targetPath)
 
         if dryRun {
             try previewModuleCreation(configuration)
@@ -77,7 +81,28 @@ public struct NewCommand: AsyncParsableCommand {
         }
     }
 
-    private func validateInputs() throws {
+    private func resolveTargetPath() throws -> String {
+        if let explicitPath = path {
+            return explicitPath
+        }
+
+        // Load configuration to get default paths
+        let configManager = ConfigurationManager()
+        let config = try configManager.loadConfiguration()
+
+        guard let moduleType = ModuleType.from(string: moduleType) else {
+            return "."
+        }
+
+        switch moduleType {
+        case .core:
+            return config.paths.coreModules ?? "."
+        case .feature:
+            return config.paths.featureModules ?? "."
+        }
+    }
+
+    private func validateInputs(targetPath: String) throws {
         Console.printStep(1, total: 4, message: "Validating inputs...")
 
         // Validate module type
@@ -88,11 +113,14 @@ public struct NewCommand: AsyncParsableCommand {
         // Validate module name
         try Validators.validateModuleName(moduleName)
 
-        // Validate path
-        try Validators.validateDirectoryExists(path)
+        // Create target directory if it doesn't exist
+        try FileManager.default.createDirectoryIfNeeded(at: targetPath)
+
+        // Validate path exists now
+        try Validators.validateDirectoryExists(targetPath)
 
         // Check if module already exists
-        let modulePath = (path as NSString).appendingPathComponent(moduleName)
+        let modulePath = (targetPath as NSString).appendingPathComponent(moduleName)
         if !force && FileManager.default.fileExists(atPath: modulePath) {
             throw CatalystError.moduleAlreadyExists(moduleName)
         }
@@ -102,11 +130,11 @@ public struct NewCommand: AsyncParsableCommand {
                 Console.print("✓ Module type: \(type.displayName)", type: .detail)
             }
             Console.print("✓ Module name: \(moduleName)", type: .detail)
-            Console.print("✓ Target path: \(path)", type: .detail)
+            Console.print("✓ Target path: \(targetPath)", type: .detail)
         }
     }
 
-    private func createModuleConfiguration() throws -> ModuleConfiguration {
+    private func createModuleConfiguration(targetPath: String) throws -> ModuleConfiguration {
         guard let type = ModuleType.from(string: moduleType) else {
             throw CatalystError.invalidModuleName("Invalid module type")
         }
@@ -114,7 +142,7 @@ public struct NewCommand: AsyncParsableCommand {
         return ModuleConfiguration(
             name: moduleName,
             type: type,
-            path: path,
+            path: targetPath,
             author: author,
             organizationName: organization
         )
