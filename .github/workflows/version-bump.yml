@@ -1,0 +1,301 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      custom_version:
+        description: 'Custom version (overrides bump type, e.g., 2.0.0-beta.1)'
+        required: false
+        type: string
+      create_release:
+        description: 'Automatically create release after version bump'
+        required: false
+        type: boolean
+        default: true
+      skip_pr:
+        description: 'Skip PR creation and commit directly to main'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  bump-version:
+    name: Bump Version
+    runs-on: macos-latest
+    outputs:
+      new-version: ${{ steps.bump.outputs.new_version }}
+      pr-number: ${{ steps.create-pr.outputs.pr_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Get current version
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(grep 'version:' Sources/CatalystCLI/CatalystCLI.swift | sed 's/.*version: "\([^"]*\)".*/\1/')
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Calculate new version
+        id: calculate-version
+        run: |
+          CURRENT_VERSION="${{ steps.current-version.outputs.current_version }}"
+          CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+
+          if [[ -n "$CUSTOM_VERSION" ]]; then
+            # Use custom version
+            NEW_VERSION="$CUSTOM_VERSION"
+            echo "Using custom version: $NEW_VERSION"
+          else
+            # Calculate semantic version bump
+            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+            MAJOR=${VERSION_PARTS[0]}
+            MINOR=${VERSION_PARTS[1]}
+            PATCH=${VERSION_PARTS[2]%%-*}  # Remove pre-release suffix if exists
+
+            case $VERSION_TYPE in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+            echo "Calculated $VERSION_TYPE version bump: $NEW_VERSION"
+          fi
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version files
+        id: bump
+        run: |
+          NEW_VERSION="${{ steps.calculate-version.outputs.new_version }}"
+          DATE=$(date +%Y-%m-%d)
+
+          echo "Updating version to $NEW_VERSION..."
+
+          # Update CatalystCLI.swift
+          CLI_FILE="Sources/CatalystCLI/CatalystCLI.swift"
+          sed -i '' "s/version: \"[^\"]*\"/version: \"$NEW_VERSION\"/" "$CLI_FILE"
+          echo "✅ Updated $CLI_FILE"
+
+          # Update CHANGELOG.md
+          CHANGELOG_FILE="CHANGELOG.md"
+          if [[ -f "$CHANGELOG_FILE" ]]; then
+            # Create temporary changelog
+            {
+              # Keep header until [Unreleased]
+              sed -n '1,/^## \[Unreleased\]/p' "$CHANGELOG_FILE"
+
+              # Add new version section
+              echo ""
+              echo "## [$NEW_VERSION] - $DATE"
+              echo ""
+              echo "### Added"
+              echo "- Version bump to $NEW_VERSION"
+              echo ""
+
+              # Add rest of file
+              sed -n '/^## \[/,$p' "$CHANGELOG_FILE" | sed '1d'
+            } > "$CHANGELOG_FILE.tmp"
+
+            mv "$CHANGELOG_FILE.tmp" "$CHANGELOG_FILE"
+            echo "✅ Updated $CHANGELOG_FILE"
+          fi
+
+          # Verify changes
+          echo "=== Version Update Summary ==="
+          echo "New version in CatalystCLI.swift:"
+          grep 'version:' "$CLI_FILE"
+
+          # Set output
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and test
+        run: |
+          echo "Building to verify changes..."
+          swift build
+
+          echo "Testing binary..."
+          ./.build/debug/catalyst --version
+
+      - name: Commit changes (direct to main)
+        if: github.event.inputs.skip_pr == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+
+          git add -A
+          git commit -m "Bump version to $NEW_VERSION
+
+          - Updated version in CatalystCLI.swift
+          - Updated CHANGELOG.md with new version section
+
+          [skip ci]"
+
+          git push origin main
+
+          echo "✅ Changes committed directly to main branch"
+
+      - name: Create Pull Request
+        if: github.event.inputs.skip_pr != 'true'
+        id: create-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newVersion = '${{ steps.bump.outputs.new_version }}';
+            const currentVersion = '${{ steps.current-version.outputs.current_version }}';
+            const versionType = '${{ github.event.inputs.version_type }}';
+            const isCustom = '${{ github.event.inputs.custom_version }}' !== '';
+
+            // Create branch
+            const branchName = `version-bump-${newVersion}`;
+
+            await exec.exec('git', ['checkout', '-b', branchName]);
+            await exec.exec('git', ['add', '-A']);
+
+            const commitMessage = `Bump version to ${newVersion}
+
+            - Updated version in CatalystCLI.swift
+            - Updated CHANGELOG.md with new version section
+
+            ${isCustom ? 'Custom version bump' : `Automatic ${versionType} version bump`}`;
+
+            await exec.exec('git', ['commit', '-m', commitMessage]);
+            await exec.exec('git', ['push', 'origin', branchName]);
+
+            // Create PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔖 Bump version to ${newVersion}`,
+              head: branchName,
+              base: 'main',
+              body: `
+            ## Version Bump: ${currentVersion} → ${newVersion}
+
+            ${isCustom ? '**Custom Version**' : `**${versionType.charAt(0).toUpperCase() + versionType.slice(1)} Version Bump**`}
+
+            ### Changes Made
+            - ✅ Updated version in \`Sources/CatalystCLI/CatalystCLI.swift\`
+            - ✅ Updated \`CHANGELOG.md\` with new version section
+            - ✅ Build verification completed
+
+            ### Next Steps
+            - [ ] Review and edit CHANGELOG.md to add specific changes
+            - [ ] Merge this PR to trigger release workflow ${github.event.inputs.create_release ? '(auto-release enabled)' : '(auto-release disabled)'}
+
+            ---
+            *This PR was created automatically by the Version Bump workflow.*
+            `
+            });
+
+            console.log(`Created PR #${pr.number}: ${pr.html_url}`);
+            return pr.number;
+
+  trigger-release:
+    name: Trigger Release
+    runs-on: ubuntu-latest
+    needs: bump-version
+    if: |
+      always() &&
+      needs.bump-version.result == 'success' &&
+      github.event.inputs.create_release == 'true' &&
+      (github.event.inputs.skip_pr == 'true' || needs.bump-version.outputs.pr-number)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Wait for PR merge
+        if: github.event.inputs.skip_pr != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ needs.bump-version.outputs.pr-number }};
+            let merged = false;
+            let attempts = 0;
+            const maxAttempts = 30; // 5 minutes
+
+            console.log(`Waiting for PR #${prNumber} to be merged...`);
+
+            while (!merged && attempts < maxAttempts) {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+
+              if (pr.merged) {
+                merged = true;
+                console.log(`✅ PR #${prNumber} has been merged`);
+              } else if (pr.state === 'closed') {
+                core.setFailed(`PR #${prNumber} was closed without merging`);
+                return;
+              } else {
+                attempts++;
+                console.log(`Waiting... (attempt ${attempts}/${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+              }
+            }
+
+            if (!merged) {
+              core.setFailed(`Timeout waiting for PR #${prNumber} to be merged`);
+            }
+
+      - name: Create and push tag
+        run: |
+          NEW_VERSION="${{ needs.bump-version.outputs.new-version }}"
+          TAG_NAME="v$NEW_VERSION"
+
+          # Fetch latest changes
+          git fetch origin main
+          git checkout main
+
+          # Create and push tag
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+
+          echo "✅ Created and pushed tag: $TAG_NAME"
+          echo "🚀 Release workflow will be triggered automatically"
+
+      - name: Summary
+        run: |
+          NEW_VERSION="${{ needs.bump-version.outputs.new-version }}"
+          echo "### 🎉 Version Bump Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**New Version:** $NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** v$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The release workflow has been triggered and will:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Build binaries for macOS (arm64 + x86_64)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Create GitHub release with assets" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Update installation script" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY

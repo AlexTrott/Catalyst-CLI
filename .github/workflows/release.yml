@@ -1,0 +1,286 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+      draft:
+        description: 'Create draft release'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  BINARY_NAME: catalyst
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create-release.outputs.result }}
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Get version
+        id: get-version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            version="${{ github.event.inputs.version }}"
+          else
+            version="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${version}" >> $GITHUB_OUTPUT
+          echo "Version: ${version}"
+
+      - name: Create Release
+        id: create-release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: '${{ steps.get-version.outputs.version }}',
+              name: 'Catalyst CLI ${{ steps.get-version.outputs.version }}',
+              body: 'Release ${{ steps.get-version.outputs.version }} of Catalyst CLI\n\n## Installation\n\n```bash\ncurl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash -s -- ${{ steps.get-version.outputs.version }}\n```\n\n## What\'s Changed\n\nSee [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.',
+              draft: ${{ github.event.inputs.draft || false }},
+              prerelease: ${{ contains(steps.get-version.outputs.version, '-') }}
+            });
+            return data.id;
+
+  build-release:
+    name: Build Release
+    runs-on: macos-latest
+    needs: create-release
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ matrix.arch }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-${{ matrix.arch }}-
+            ${{ runner.os }}-spm-
+
+      - name: Build binary
+        run: |
+          echo "Building for ${{ matrix.arch }}..."
+          swift build -c release --arch ${{ matrix.arch }}
+
+          # Find the correct binary path
+          BINARY_PATH=".build/${{ matrix.arch }}-apple-macos/release/${{ env.BINARY_NAME }}"
+          if [[ ! -f "$BINARY_PATH" ]]; then
+            # Fallback path structure
+            BINARY_PATH=".build/release/${{ env.BINARY_NAME }}"
+          fi
+
+          if [[ ! -f "$BINARY_PATH" ]]; then
+            echo "❌ Binary not found at expected paths"
+            find .build -name "${{ env.BINARY_NAME }}" -type f
+            exit 1
+          fi
+
+          echo "✅ Binary built successfully at: $BINARY_PATH"
+          echo "BINARY_PATH=$BINARY_PATH" >> $GITHUB_ENV
+
+          # Get binary size
+          BINARY_SIZE=$(du -h "$BINARY_PATH" | cut -f1)
+          echo "Binary size: $BINARY_SIZE"
+
+      - name: Test binary
+        run: |
+          echo "Testing binary functionality..."
+
+          # Make binary executable
+          chmod +x "$BINARY_PATH"
+
+          # Test version command
+          "$BINARY_PATH" --version
+
+          # Test help command
+          "$BINARY_PATH" --help
+
+          echo "✅ Binary tests passed"
+
+      - name: Create release archive
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          ARCHIVE_NAME="${{ env.BINARY_NAME }}-${VERSION}-${{ matrix.arch }}-apple-macos"
+          RELEASE_DIR="release"
+
+          # Create release directory
+          mkdir -p "$RELEASE_DIR"
+
+          # Copy binary with standard name
+          cp "$BINARY_PATH" "$RELEASE_DIR/${{ env.BINARY_NAME }}"
+
+          # Create tarball
+          cd "$RELEASE_DIR"
+          tar -czf "${ARCHIVE_NAME}.tar.gz" "${{ env.BINARY_NAME }}"
+
+          # Generate checksums
+          shasum -a 256 "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
+
+          # Store paths for upload
+          echo "ARCHIVE_PATH=$PWD/${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
+          echo "CHECKSUM_PATH=$PWD/${ARCHIVE_NAME}.tar.gz.sha256" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+          # Show file info
+          ls -lah "${ARCHIVE_NAME}.tar.gz"*
+
+      - name: Upload release assets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const archivePath = process.env.ARCHIVE_PATH;
+            const checksumPath = process.env.CHECKSUM_PATH;
+            const archiveName = process.env.ARCHIVE_NAME;
+            const releaseId = ${{ needs.create-release.outputs.release-id }};
+
+            // Upload archive
+            const archiveData = fs.readFileSync(archivePath);
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+              name: `${archiveName}.tar.gz`,
+              data: archiveData,
+            });
+
+            // Upload checksum
+            const checksumData = fs.readFileSync(checksumPath);
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+              name: `${archiveName}.tar.gz.sha256`,
+              data: checksumData,
+            });
+
+            console.log(`✅ Uploaded ${archiveName}.tar.gz and checksum`);
+
+  finalize-release:
+    name: Finalize Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release]
+    if: always() && needs.create-release.result == 'success'
+    steps:
+      - name: Update release status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseId = ${{ needs.create-release.outputs.release-id }};
+            const buildSuccess = '${{ needs.build-release.result }}' === 'success';
+
+            if (buildSuccess) {
+              console.log('✅ All builds completed successfully');
+
+              // Update release body with installation instructions
+              const version = '${{ needs.create-release.outputs.version }}';
+              const releaseBody = `
+            Release ${version} of Catalyst CLI
+
+            ## Installation
+
+            ### Quick Install (Recommended)
+            \`\`\`bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash -s -- ${version}
+            \`\`\`
+
+            ### Manual Download
+            Download the appropriate binary for your architecture:
+            - **Apple Silicon (M1/M2/M3)**: \`catalyst-${version}-arm64-apple-macos.tar.gz\`
+            - **Intel Macs**: \`catalyst-${version}-x86_64-apple-macos.tar.gz\`
+
+            ### Verification
+            Verify downloads using the provided SHA256 checksums.
+
+            ## What's Changed
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes.
+
+            ## Documentation
+
+            - 📖 [Getting Started Guide](https://github.com/${{ github.repository }}#getting-started)
+            - 🔧 [Configuration Guide](https://github.com/${{ github.repository }}#configuration)
+            - 🏗️ [Template System](https://github.com/${{ github.repository }}#templates)
+            `;
+
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: releaseId,
+                body: releaseBody
+              });
+
+            } else {
+              console.log('❌ Build failed, marking release as draft');
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: releaseId,
+                draft: true
+              });
+            }
+
+      - name: Notify on failure
+        if: needs.build-release.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Release build failed. Release has been marked as draft.');
+
+  update-install-script:
+    name: Update Install Script
+    runs-on: ubuntu-latest
+    needs: [create-release, build-release]
+    if: needs.build-release.result == 'success' && !contains(needs.create-release.outputs.version, '-')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update install script version
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          # Remove 'v' prefix for version variable
+          CLEAN_VERSION="${VERSION#v}"
+
+          # Update default version in install.sh
+          sed -i "s/DEFAULT_VERSION=\"[^\"]*\"/DEFAULT_VERSION=\"$CLEAN_VERSION\"/" install.sh
+
+          # Check if changes were made
+          if git diff --quiet install.sh; then
+            echo "No changes to install.sh"
+          else
+            echo "✅ Updated install.sh default version to $CLEAN_VERSION"
+
+            # Commit and push changes
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add install.sh
+            git commit -m "Update install.sh default version to $CLEAN_VERSION"
+            git push
+          fi
