@@ -20,6 +20,11 @@ public enum AppIconError: LocalizedError {
     }
 }
 
+/// Thread-safe container for Result to avoid concurrency warnings
+private final class ResultBox<T>: @unchecked Sendable {
+    var result: Result<T, Error> = .failure(AppIconError.failedToFetchEmoji)
+}
+
 /// Generates modern single-size app icons with pig emojis for MicroApps
 /// Uses the simplified iOS 14+ approach with a single 1024x1024 icon
 public class AppIconGenerator {
@@ -374,26 +379,26 @@ public class AppIconGenerator {
             throw AppIconError.invalidURL
         }
 
-        // Fetch the image data
+        // Fetch the image data synchronously using a different approach
         let semaphore = DispatchSemaphore(value: 0)
-        var imageData: Data?
-        var fetchError: Error?
+        let resultBox = ResultBox<Data>()
 
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
-            imageData = data
-            fetchError = error
+            if let error = error {
+                resultBox.result = .failure(error)
+            } else if let data = data {
+                resultBox.result = .success(data)
+            } else {
+                resultBox.result = .failure(AppIconError.invalidImageData)
+            }
             semaphore.signal()
         }
 
         task.resume()
         semaphore.wait()
 
-        if let error = fetchError {
-            throw error
-        }
-
-        guard let data = imageData,
-              let image = NSImage(data: data) else {
+        let data = try resultBox.result.get()
+        guard let image = NSImage(data: data) else {
             throw AppIconError.invalidImageData
         }
 
