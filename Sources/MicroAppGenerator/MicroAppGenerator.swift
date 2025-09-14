@@ -523,16 +523,25 @@ public class MicroAppGenerator {
         } catch {
             print("⚠️  XcodeGen not found. Install with 'brew install xcodegen' to generate Xcode project")
             print("   Project files created, but .xcodeproj generation skipped")
+            print("   You can manually run 'xcodegen generate' in the MicroApp directory later")
             return
         }
 
-        // Run XcodeGen
+        // Ensure project.yml exists
+        let projectYmlPath = path + "project.yml"
+        guard projectYmlPath.exists else {
+            throw MicroAppError.invalidConfiguration("project.yml not found at \(projectYmlPath)")
+        }
+
+        // Run XcodeGen to generate the project
         do {
+            print("🔨 Generating Xcode project using XcodeGen...")
             let _ = try Shell.run("cd '\(path.string)' && xcodegen generate", silent: false)
             print("✅ Xcode project generated successfully")
         } catch {
             print("⚠️  Failed to generate Xcode project: \(error.localizedDescription)")
             print("   You can manually run 'xcodegen generate' in the MicroApp directory")
+            print("   Directory: \(path.string)")
         }
     }
 }

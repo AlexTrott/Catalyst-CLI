@@ -7,6 +7,7 @@ import struct PackageGenerator.ModuleConfiguration
 import enum PackageGenerator.ModuleType
 import WorkspaceManager
 import ConfigurationManager
+import MicroAppGenerator
 
 public struct NewCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -16,14 +17,15 @@ public struct NewCommand: AsyncParsableCommand {
         catalyst new <type> <name> [options]
         catalyst new core NetworkingCore
         catalyst new feature AuthenticationFeature --author "John Doe"
+        catalyst new microapp TestApp
         """,
         discussion: """
-        Creates a new Swift package module from a template. Supports Core modules for business logic
-        and Feature modules for UI components. Automatically adds the module to your Xcode workspace.
+        Creates a new Swift package module or MicroApp from a template. Supports Core modules for business logic,
+        Feature modules for UI components, and MicroApps for isolated testing environments.
         """
     )
 
-    @Argument(help: "The type of module to create (core, feature)")
+    @Argument(help: "The type of module to create (core, feature, microapp)")
     public var moduleType: String
 
     @Argument(help: "The name of the module")
@@ -70,7 +72,11 @@ public struct NewCommand: AsyncParsableCommand {
         }
 
         // Create the module
-        try await createModule(configuration)
+        if configuration.type == .microapp {
+            try await createMicroApp(configuration)
+        } else {
+            try await createModule(configuration)
+        }
 
         // Success message
         Console.printEmoji("✅", message: "Module '\(moduleName)' created successfully!")
@@ -99,6 +105,8 @@ public struct NewCommand: AsyncParsableCommand {
             return config.paths.coreModules ?? "."
         case .feature:
             return config.paths.featureModules ?? "."
+        case .microapp:
+            return config.paths.microApps ?? "./MicroApps"
         }
     }
 
@@ -205,6 +213,26 @@ public struct NewCommand: AsyncParsableCommand {
             Console.print("Create an Xcode workspace to automatically include new packages", type: .detail)
         }
 
+        Console.printStep(4, total: 4, message: "Finalizing setup...")
+    }
+
+    private func createMicroApp(_ configuration: ModuleConfiguration) async throws {
+        Console.printStep(2, total: 4, message: "Creating MicroApp...")
+
+        // Convert ModuleConfiguration to MicroAppConfiguration
+        let microAppConfig = MicroAppConfiguration(
+            featureName: configuration.name,
+            outputPath: configuration.path,
+            bundleIdentifier: nil, // This will be generated based on app name
+            author: configuration.author,
+            organizationName: configuration.organizationName
+        )
+
+        let templateEngine = TemplateEngine()
+        let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
+        try microAppGenerator.generateMicroApp(microAppConfig)
+
+        Console.printStep(3, total: 4, message: "Configuring project...")
         Console.printStep(4, total: 4, message: "Finalizing setup...")
     }
 }

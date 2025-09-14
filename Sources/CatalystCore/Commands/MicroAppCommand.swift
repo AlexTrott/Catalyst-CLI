@@ -7,15 +7,14 @@ import ConfigurationManager
 public struct MicroAppCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "microapp",
-        abstract: "Create MicroApps for isolated feature testing",
+        abstract: "Manage MicroApps (DEPRECATED: Use 'catalyst new microapp' to create)",
         usage: """
-        catalyst microapp create <feature-name>
         catalyst microapp list
+        catalyst microapp create <feature-name>  [DEPRECATED]
         """,
         discussion: """
-        MicroApps are minimal iOS applications that contain a single feature module
-        for isolated development and testing. They use XcodeGen for project generation
-        and include all necessary boilerplate to run immediately after creation.
+        Manage existing MicroApps. For creating new MicroApps, use 'catalyst new microapp <name>'.
+        The create subcommand is deprecated and will be removed in a future version.
         """,
         subcommands: [
             CreateMicroAppCommand.self,
@@ -49,8 +48,28 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
     public init() {}
 
     public mutating func run() async throws {
-        Console.printHeader("Creating MicroApp")
+        Console.printHeader("MicroApp Creation")
 
+        Console.print("⚠️  DEPRECATED: Use 'catalyst new microapp <name>' instead", type: .warning)
+        Console.print("   The 'microapp create' command will be removed in a future version.", type: .detail)
+        Console.newLine()
+
+        Console.print("💡 Try this instead:", type: .info)
+        Console.print("   catalyst new microapp \(featureName)", type: .detail)
+        Console.newLine()
+
+        // Ask for confirmation to continue with deprecated command
+        print("Continue with deprecated command? (y/N): ", terminator: "")
+        if let input = readLine(), input.lowercased() != "y" && input.lowercased() != "yes" {
+            Console.print("Operation cancelled. Use 'catalyst new microapp \(featureName)' for the new approach.", type: .info)
+            return
+        }
+
+        // Continue with existing logic for backward compatibility
+        try await runLegacyMicroAppCreation()
+    }
+
+    private func runLegacyMicroAppCreation() async throws {
         // Validate inputs
         try validateInputs()
 

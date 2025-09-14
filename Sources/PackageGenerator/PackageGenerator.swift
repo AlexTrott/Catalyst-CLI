@@ -7,6 +7,7 @@ import Files
 public enum ModuleType: String, CaseIterable {
     case core
     case feature
+    case microapp
 
     public var displayName: String {
         switch self {
@@ -14,6 +15,8 @@ public enum ModuleType: String, CaseIterable {
             return "Core Module"
         case .feature:
             return "Feature Module"
+        case .microapp:
+            return "MicroApp"
         }
     }
 
@@ -23,11 +26,18 @@ public enum ModuleType: String, CaseIterable {
             return "A module containing business logic, services, and models"
         case .feature:
             return "A module containing UI components, view controllers, and coordinators"
+        case .microapp:
+            return "A standalone iOS app for testing a single feature in isolation"
         }
     }
 
     public var templateName: String {
-        return rawValue.capitalized + "Module"
+        switch self {
+        case .core, .feature:
+            return rawValue.capitalized + "Module"
+        case .microapp:
+            return "MicroApp"
+        }
     }
 
     public var directoryStructure: [String] {
@@ -52,6 +62,13 @@ public enum ModuleType: String, CaseIterable {
                 "Tests/{{ModuleName}}Tests/ViewTests/",
                 "Tests/{{ModuleName}}Tests/ViewModelTests/"
             ]
+        case .microapp:
+            return [
+                "{{ModuleName}}/",
+                "{{ModuleName}}/Supporting Files/",
+                "Assets.xcassets/",
+                "Assets.xcassets/AppIcon.appiconset/",
+            ]
         }
     }
 
@@ -70,6 +87,15 @@ public enum ModuleType: String, CaseIterable {
                 "Sources/{{ModuleName}}/ViewModels/{{ModuleName}}ViewModel.swift",
                 "Sources/{{ModuleName}}/Coordinators/{{ModuleName}}Coordinator.swift"
             ]
+        case .microapp:
+            return [
+                "{{ModuleName}}/AppDelegate.swift",
+                "{{ModuleName}}/SceneDelegate.swift",
+                "{{ModuleName}}/ContentView.swift",
+                "{{ModuleName}}/DependencyContainer.swift",
+                "{{ModuleName}}/Supporting Files/Info.plist",
+                "{{ModuleName}}/Supporting Files/LaunchScreen.storyboard"
+            ]
         }
     }
 
@@ -86,6 +112,10 @@ public enum ModuleType: String, CaseIterable {
                 "Tests/{{ModuleName}}Tests/ViewTests/{{ModuleName}}ViewTests.swift",
                 "Tests/{{ModuleName}}Tests/ViewModelTests/{{ModuleName}}ViewModelTests.swift"
             ]
+        case .microapp:
+            return [
+                "{{ModuleName}}Tests/{{ModuleName}}Tests.swift"
+            ]
         }
     }
 
@@ -95,6 +125,8 @@ public enum ModuleType: String, CaseIterable {
             return ["Foundation"]
         case .feature:
             return ["Foundation", "UIKit", "SwiftUI"]
+        case .microapp:
+            return ["UIKit", "SwiftUI"]
         }
     }
 
@@ -402,6 +434,10 @@ public struct \(configuration.name) {
     }
 }
 """
+
+        case .microapp:
+            // MicroApp is handled by MicroAppGenerator, not PackageGenerator
+            return ""
 
         case .feature:
             return """
