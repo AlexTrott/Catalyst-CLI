@@ -153,8 +153,8 @@ public struct CatalystConfiguration: Codable {
     /// Default configuration
     public static var `default`: CatalystConfiguration {
         return CatalystConfiguration(
-            swiftVersion: "5.9",
-            defaultPlatforms: [".iOS(.v16)"],
+            swiftVersion: "6.0",
+            defaultPlatforms: [".iOS(.v15)"],
             verbose: false,
             colorOutput: true,
             defaultModulesPath: ".",
