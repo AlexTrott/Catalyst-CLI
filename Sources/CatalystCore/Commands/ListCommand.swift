@@ -200,7 +200,7 @@ public struct ListCommand: AsyncParsableCommand {
         if FileManager.default.fileExists(atPath: packageSwiftPath) {
             // Try to read Package.swift for more details
             do {
-                let content = try String(contentsOfFile: packageSwiftPath)
+                let content = try String(contentsOfFile: packageSwiftPath, encoding: .utf8)
 
                 // Extract product names (simplified parsing)
                 let productNames = extractProducts(from: content)

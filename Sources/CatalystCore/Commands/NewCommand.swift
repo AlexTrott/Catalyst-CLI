@@ -210,13 +210,74 @@ public struct NewCommand: AsyncParsableCommand {
             throw CatalystError.invalidModuleName("Invalid module type")
         }
 
+        // Load configuration from .catalyst.yml
+        let configManager = ConfigurationManager()
+        let config = try configManager.loadConfiguration()
+
+        // Parse platforms from configuration
+        let platforms = parsePlatforms(from: config.defaultPlatforms) ?? [.iOS(.v16)]
+
+        // Use configuration values or fallbacks
+        let resolvedAuthor = author ?? config.author
+        let resolvedOrganization = organization ?? config.organizationName
+        let swiftVersion = config.swiftVersion ?? "5.9"
+
         return ModuleConfiguration(
             name: moduleName,
             type: type,
             path: targetPath,
-            author: author,
-            organizationName: organization
+            author: resolvedAuthor,
+            organizationName: resolvedOrganization,
+            bundleIdentifier: config.bundleIdentifierPrefix.map { "\($0).\(moduleName.lowercased())" },
+            swiftVersion: swiftVersion,
+            platforms: platforms,
+            dependencies: [],
+            customTemplateVariables: config.defaultTemplateVariables ?? [:]
         )
+    }
+
+    private func parsePlatforms(from platformStrings: [String]?) -> [Platform]? {
+        guard let platformStrings = platformStrings, !platformStrings.isEmpty else {
+            return nil
+        }
+
+        return platformStrings.compactMap { platformString in
+            // Parse strings like ".iOS(.v15)", ".macOS(.v12)"
+            if platformString.contains("iOS") {
+                if platformString.contains("v15") {
+                    return .iOS(.v15)
+                } else if platformString.contains("v16") {
+                    return .iOS(.v16)
+                } else if platformString.contains("v17") {
+                    return .iOS(.v17)
+                } else if platformString.contains("v14") {
+                    return .iOS(.v14)
+                } else if platformString.contains("v13") {
+                    return .iOS(.v13)
+                } else if platformString.contains("v12") {
+                    return .iOS(.v12)
+                } else {
+                    return .iOS(.v16) // Default iOS version
+                }
+            } else if platformString.contains("macOS") {
+                if platformString.contains("v12") {
+                    return .macOS(.v12)
+                } else if platformString.contains("v13") {
+                    return .macOS(.v13)
+                } else if platformString.contains("v14") {
+                    return .macOS(.v14)
+                } else if platformString.contains("v15") {
+                    return .macOS(.v15)
+                } else if platformString.contains("v16") {
+                    return .macOS(.v16)
+                } else if platformString.contains("v17") {
+                    return .macOS(.v17)
+                } else {
+                    return .macOS(.v13) // Default macOS version
+                }
+            }
+            return nil
+        }
     }
 
     private func previewModuleCreation(_ configuration: ModuleConfiguration) throws {
@@ -267,10 +328,14 @@ public struct NewCommand: AsyncParsableCommand {
                 let workspaceManager = WorkspaceManager()
                 let packagePath = (configuration.path as NSString).appendingPathComponent(configuration.name)
 
+                // Determine appropriate group based on module type
+                let groupPath = getWorkspaceGroupPath(for: configuration.type)
+
                 do {
                     try workspaceManager.addPackageToWorkspace(
                         packagePath: packagePath,
-                        workspacePath: workspacePath
+                        workspacePath: workspacePath,
+                        groupPath: groupPath
                     )
                     Console.print("✓ Added package to workspace", type: .detail)
                 } catch {
@@ -315,23 +380,30 @@ public struct NewCommand: AsyncParsableCommand {
             bundleIdentifier: configuration.bundleIdentifier,
             author: configuration.author,
             organizationName: configuration.organizationName,
-            isLocalPackage: true  // New parameter to indicate local package reference
+            isLocalPackage: true,  // New parameter to indicate local package reference
+            addToWorkspace: false  // We handle workspace integration manually in NewCommand
         )
 
         let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
         try microAppGenerator.generateMicroApp(microAppConfig)
 
-        // Add only the Feature Module to workspace
+        // Add Feature Module and MicroApp to workspace using feature-specific integration
         if let workspacePath = FileManager.default.findWorkspace() {
             let workspaceManager = WorkspaceManager()
             let packagePath = (wrapperPath as NSString).appendingPathComponent(configuration.name)
+            let microAppProjectPath = (wrapperPath as NSString).appendingPathComponent("\(configuration.name)App")
+            let microAppXcodeProjPath = (microAppProjectPath as NSString).appendingPathComponent("\(configuration.name)App.xcodeproj")
 
             do {
-                try workspaceManager.addPackageToWorkspace(
-                    packagePath: packagePath,
+                // Use feature-specific workspace integration to create proper nested structure
+                try workspaceManager.addFeatureToWorkspace(
+                    featureName: configuration.name,
+                    featurePackagePath: packagePath,
+                    microAppProjectPath: microAppXcodeProjPath,
                     workspacePath: workspacePath
                 )
                 Console.print("✓ Added feature package to workspace", type: .detail)
+                Console.print("✓ Added MicroApp project to workspace", type: .detail)
                 Console.print("✓ Created companion MicroApp at \(wrapperPath)/\(configuration.name)App", type: .detail)
             } catch {
                 Console.print("⚠️  Could not add to workspace: \(error.localizedDescription)", type: .warning)
@@ -352,7 +424,8 @@ public struct NewCommand: AsyncParsableCommand {
             outputPath: configuration.path,
             bundleIdentifier: nil, // This will be generated based on app name
             author: configuration.author,
-            organizationName: configuration.organizationName
+            organizationName: configuration.organizationName,
+            addToWorkspace: true  // Standalone MicroApps should be added to workspace
         )
 
         let templateEngine = TemplateEngine()
@@ -361,5 +434,16 @@ public struct NewCommand: AsyncParsableCommand {
 
         Console.printStep(3, total: 4, message: "Configuring project...")
         Console.printStep(4, total: 4, message: "Finalizing setup...")
+    }
+
+    private func getWorkspaceGroupPath(for moduleType: ModuleType) -> String? {
+        switch moduleType {
+        case .core:
+            return "Modules/Core"
+        case .feature:
+            return "Modules/Features"
+        case .microapp:
+            return "MicroApps"
+        }
     }
 }

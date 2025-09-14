@@ -309,7 +309,7 @@ public struct ListMicroAppCommand: ParsableCommand {
         var featureName: String?
         var bundleId: String?
 
-        if let content = try? String(contentsOfFile: projectYmlPath) {
+        if let content = try? String(contentsOfFile: projectYmlPath, encoding: .utf8) {
             // Simple parsing - look for package dependencies
             let lines = content.components(separatedBy: .newlines)
             for line in lines {

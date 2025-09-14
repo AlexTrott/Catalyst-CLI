@@ -450,7 +450,7 @@ public struct DoctorCommand: AsyncParsableCommand {
 
         if FileManager.default.fileExists(atPath: gitignorePath) {
             do {
-                let content = try String(contentsOfFile: gitignorePath)
+                let content = try String(contentsOfFile: gitignorePath, encoding: .utf8)
                 let hasSwiftEntries = content.contains(".build") || content.contains("*.xcworkspace")
 
                 return DiagnosticCheck(

@@ -71,6 +71,7 @@ struct Catalyst: AsyncParsableCommand {
         • catalyst new feature MyFeature  # Creates feature + MicroApp
         • catalyst new core MyCore        # Creates core module
         • catalyst install git-message    # Auto-prefix commits with JIRA tickets
+        • catalyst install packages       # Install development tools (brew)
         • catalyst reset-spm              # Clean Package.resolved conflicts
         • catalyst doctor                 # Check your environment
         • catalyst --help                 # See all commands

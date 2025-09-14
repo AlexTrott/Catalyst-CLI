@@ -44,7 +44,6 @@ public struct ListTemplatesCommand: ParsableCommand {
     public mutating func run() throws {
         Console.printHeader("Available Templates")
 
-        let templateEngine = TemplateEngine()
         let templateLoader = TemplateLoader()
 
         let templates = templateLoader.listTemplatesWithDetails()
@@ -132,7 +131,7 @@ public struct ListTemplatesCommand: ParsableCommand {
 
     private func displayFileTemplateDetails(at path: String) {
         do {
-            let content = try String(contentsOfFile: path)
+            let content = try String(contentsOfFile: path, encoding: .utf8)
             let lines = content.components(separatedBy: .newlines)
             Console.print("   Size: \(content.count) characters, \(lines.count) lines")
 
@@ -475,7 +474,7 @@ public struct ValidateTemplateCommand: ParsableCommand {
         let content = try file.read(.utf8)
 
         // Try to parse with Stencil
-        let template = try Template(templateString: content)
+        let template = Template(templateString: content)
 
         // Try a test render with common variables
         let testContext: [String: Any] = [

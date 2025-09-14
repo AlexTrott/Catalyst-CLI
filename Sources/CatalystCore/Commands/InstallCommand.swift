@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import Utilities
+import ConfigurationManager
 
 /// Install various development tools and configurations.
 ///
@@ -37,9 +38,11 @@ public struct InstallCommand: AsyncParsableCommand {
 
         Currently supported installations:
           git-message: Auto-prefix commits with JIRA tickets from branch names
+          packages: Install and update Homebrew packages from configuration
         """,
         subcommands: [
-            GitMessageCommand.self
+            GitMessageCommand.self,
+            PackagesCommand.self
         ]
     )
 
@@ -345,6 +348,202 @@ public enum InstallError: LocalizedError {
             return "Check file permissions and try again"
         case .permissionDenied:
             return "Check that you have write permissions to the .git/hooks directory"
+        }
+    }
+}
+
+// MARK: - Packages Command
+
+public struct PackagesCommand: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
+        commandName: "packages",
+        abstract: "Install and update Homebrew packages from configuration",
+        discussion: """
+        Install Homebrew (if not already installed) and manage packages listed in your
+        .catalyst.yml configuration file.
+
+        This command will:
+        • Install Homebrew if not present
+        • Read package list from .catalyst.yml (brewPackages section)
+        • Install missing packages
+        • Update existing packages to latest versions
+
+        Default packages: swiftlint, swiftformat, xcodes
+
+        Examples:
+          catalyst install packages              # Install/update all configured packages
+          catalyst install packages --dry-run   # Preview what would be done
+          catalyst install packages --force     # Force reinstall existing packages
+        """
+    )
+
+    @Flag(name: .shortAndLong, help: "Preview actions without making changes")
+    var dryRun = false
+
+    @Flag(name: .shortAndLong, help: "Force reinstall packages even if already installed")
+    var force = false
+
+    @Flag(name: .shortAndLong, help: "Show detailed output during operations")
+    var verbose = false
+
+    public init() {}
+
+    public mutating func run() async throws {
+        Console.printHeader("📦 Package Installation")
+
+        let brewManager = BrewManager()
+        let configManager = ConfigurationManager()
+
+        // Load configuration
+        let config: CatalystConfiguration
+        do {
+            config = try configManager.loadConfiguration()
+        } catch {
+            if verbose {
+                Console.print("Could not load configuration, using defaults: \(error.localizedDescription)", type: .detail)
+            }
+            config = .default
+        }
+
+        let packages = config.brewPackages ?? CatalystConfiguration.default.brewPackages ?? []
+
+        if packages.isEmpty {
+            Console.print("No packages configured for installation", type: .warning)
+            return
+        }
+
+        Console.print("Target packages: \(packages.joined(separator: ", "))", type: .info)
+
+        // Check and install Homebrew
+        try await ensureHomebrewInstalled(brewManager)
+
+        // Analyze packages
+        let packageInfos = packages.map { brewManager.getPackageInfo($0) }
+
+        if verbose {
+            Console.printStep(1, total: 3, message: "Package analysis complete")
+            for info in packageInfos {
+                let status = info.isInstalled ? (info.isOutdated ? "outdated" : "installed") : "missing"
+                let version = info.version ?? "unknown"
+                Console.print("  • \(info.name): \(status) (\(version))", type: .detail)
+            }
+        }
+
+        // Show installation plan
+        let toInstall = packageInfos.filter { !$0.isInstalled }
+        let toUpdate = packageInfos.filter { $0.isInstalled && ($0.isOutdated || force) }
+
+        if toInstall.isEmpty && toUpdate.isEmpty {
+            Console.print("🎉 All packages are up to date!", type: .success)
+            return
+        }
+
+        if dryRun {
+            Console.printBoxed("🔍 DRY RUN - No packages will be modified", style: .rounded)
+            if !toInstall.isEmpty {
+                Console.print("Would install: \(toInstall.map { $0.name }.joined(separator: ", "))", type: .info)
+            }
+            if !toUpdate.isEmpty {
+                Console.print("Would update: \(toUpdate.map { $0.name }.joined(separator: ", "))", type: .info)
+            }
+            return
+        }
+
+        // Get user confirmation
+        if !force && (!toInstall.isEmpty || !toUpdate.isEmpty) {
+            Console.newLine()
+            var message = "Proceed with package operations?"
+            if !toInstall.isEmpty {
+                message += "\n  Install: \(toInstall.map { $0.name }.joined(separator: ", "))"
+            }
+            if !toUpdate.isEmpty {
+                message += "\n  Update: \(toUpdate.map { $0.name }.joined(separator: ", "))"
+            }
+
+            Console.print("\(message) (y/N): ", type: .info)
+            if let input = readLine(), input.lowercased() != "y" && input.lowercased() != "yes" {
+                Console.print("Operation cancelled", type: .info)
+                return
+            }
+        }
+
+        // Install missing packages
+        if !toInstall.isEmpty {
+            Console.printStep(2, total: 3, message: "Installing packages...")
+            for package in toInstall {
+                do {
+                    if verbose {
+                        Console.print("Installing \(package.name)...", type: .progress)
+                    }
+                    try await brewManager.installPackage(package.name)
+                    Console.print("✅ Installed \(package.name)", type: .success)
+                } catch {
+                    Console.print("❌ Failed to install \(package.name): \(error.localizedDescription)", type: .error)
+                }
+            }
+        }
+
+        // Update existing packages
+        if !toUpdate.isEmpty {
+            Console.printStep(3, total: 3, message: "Updating packages...")
+            for package in toUpdate {
+                do {
+                    if verbose {
+                        Console.print("Updating \(package.name)...", type: .progress)
+                    }
+                    try await brewManager.updatePackage(package.name)
+                    Console.print("✅ Updated \(package.name)", type: .success)
+                } catch {
+                    Console.print("❌ Failed to update \(package.name): \(error.localizedDescription)", type: .error)
+                }
+            }
+        }
+
+        Console.newLine()
+        Console.print("🎉 Package installation complete!", type: .success)
+
+        // Show next steps
+        Console.newLine()
+        Console.print("📋 Installed tools:", type: .info)
+        let finalInfos = packages.map { brewManager.getPackageInfo($0) }
+        for info in finalInfos where info.isInstalled {
+            let version = info.version ?? "unknown"
+            Console.print("  • \(info.name) (\(version))", type: .detail)
+        }
+    }
+
+    private func ensureHomebrewInstalled(_ brewManager: BrewManager) async throws {
+        if brewManager.isBrewInstalled() {
+            if verbose {
+                Console.print("✅ Homebrew is installed", type: .success)
+                if let version = brewManager.getBrewVersion() {
+                    Console.print("  Version: \(version)", type: .detail)
+                }
+            }
+            return
+        }
+
+        Console.print("🍺 Homebrew not found", type: .warning)
+
+        if dryRun {
+            Console.printDryRun("Would install Homebrew")
+            return
+        }
+
+        Console.print("Homebrew is required to install packages. Install now? (y/N): ", type: .info)
+        if let input = readLine(), input.lowercased() == "y" || input.lowercased() == "yes" {
+            Console.print("Installing Homebrew... This may take a few minutes.", type: .progress)
+
+            do {
+                try await brewManager.installBrew()
+                Console.print("🎉 Homebrew installed successfully!", type: .success)
+            } catch {
+                Console.print("❌ Failed to install Homebrew: \(error.localizedDescription)", type: .error)
+                throw error
+            }
+        } else {
+            Console.print("Operation cancelled. Homebrew is required for package installation.", type: .info)
+            throw BrewManager.BrewError.brewNotFound
         }
     }
 }

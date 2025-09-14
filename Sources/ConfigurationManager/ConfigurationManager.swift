@@ -119,6 +119,9 @@ public struct CatalystConfiguration: Codable {
     public var defaultModulesPath: String?
     public var paths: ModulePaths
 
+    // MARK: - Package Management
+    public var brewPackages: [String]?
+
     public init(
         author: String? = nil,
         organizationName: String? = nil,
@@ -130,7 +133,8 @@ public struct CatalystConfiguration: Codable {
         verbose: Bool? = nil,
         colorOutput: Bool? = nil,
         defaultModulesPath: String? = nil,
-        paths: ModulePaths = .default
+        paths: ModulePaths = .default,
+        brewPackages: [String]? = nil
     ) {
         self.author = author
         self.organizationName = organizationName
@@ -143,6 +147,7 @@ public struct CatalystConfiguration: Codable {
         self.colorOutput = colorOutput
         self.defaultModulesPath = defaultModulesPath
         self.paths = paths
+        self.brewPackages = brewPackages
     }
 
     /// Default configuration
@@ -152,7 +157,8 @@ public struct CatalystConfiguration: Codable {
             defaultPlatforms: [".iOS(.v16)"],
             verbose: false,
             colorOutput: true,
-            defaultModulesPath: "."
+            defaultModulesPath: ".",
+            brewPackages: ["swiftlint", "swiftformat", "xcodes"]
         )
     }
 
@@ -169,7 +175,8 @@ public struct CatalystConfiguration: Codable {
             verbose: other.verbose ?? self.verbose,
             colorOutput: other.colorOutput ?? self.colorOutput,
             defaultModulesPath: other.defaultModulesPath ?? self.defaultModulesPath,
-            paths: mergedPaths(other.paths)
+            paths: mergedPaths(other.paths),
+            brewPackages: other.brewPackages ?? self.brewPackages
         )
     }
 

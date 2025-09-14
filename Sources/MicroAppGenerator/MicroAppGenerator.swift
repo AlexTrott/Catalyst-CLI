@@ -5,6 +5,8 @@ import Files
 import Yams
 import XcodeGenKit
 import ProjectSpec
+import WorkspaceManager
+import Utilities
 
 /// Generates complete iOS MicroApps for isolated feature testing.
 ///
@@ -582,6 +584,33 @@ public class MicroAppGenerator {
             throw MicroAppError.projectGenerationFailed(error)
         }
     }
+
+    // MARK: - Workspace Integration
+
+    private func addToWorkspace(microAppPath: Path, configuration: MicroAppConfiguration) throws {
+        guard let workspacePath = FileManager.default.findWorkspace() else {
+            return // No workspace found, skip workspace integration
+        }
+
+        let workspaceManager = WorkspaceManager()
+        let projectPath = microAppPath + "\(configuration.featureName)App.xcodeproj"
+
+        // Only add if the project exists
+        guard FileManager.default.fileExists(atPath: projectPath.string) else {
+            return
+        }
+
+        do {
+            try workspaceManager.addProjectToWorkspace(
+                projectPath: projectPath.string,
+                workspacePath: workspacePath,
+                groupPath: "MicroApps"
+            )
+            print("✓ Added MicroApp project to workspace")
+        } catch {
+            print("⚠️  Could not add MicroApp to workspace: \(error.localizedDescription)")
+        }
+    }
 }
 
 // MARK: - Configuration Model
@@ -593,6 +622,7 @@ public struct MicroAppConfiguration {
     public let author: String?
     public let organizationName: String?
     public let isLocalPackage: Bool
+    public let addToWorkspace: Bool
 
     public init(
         featureName: String,
@@ -600,7 +630,8 @@ public struct MicroAppConfiguration {
         bundleIdentifier: String? = nil,
         author: String? = nil,
         organizationName: String? = nil,
-        isLocalPackage: Bool = false
+        isLocalPackage: Bool = false,
+        addToWorkspace: Bool = false
     ) {
         self.featureName = featureName
         self.outputPath = outputPath
@@ -608,6 +639,7 @@ public struct MicroAppConfiguration {
         self.author = author
         self.organizationName = organizationName
         self.isLocalPackage = isLocalPackage
+        self.addToWorkspace = addToWorkspace
     }
 }
 

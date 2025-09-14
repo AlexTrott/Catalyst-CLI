@@ -119,6 +119,9 @@ catalyst new feature AuthenticationFeature
 # Install git hook for JIRA ticket prefixing
 catalyst install git-message
 
+# Install development packages (swiftlint, swiftformat, xcodes)
+catalyst install packages
+
 # Clean Package.resolved conflicts
 catalyst reset-spm
 ```
@@ -180,6 +183,8 @@ FeatureName/
 
 Install development tools and workflow enhancements.
 
+#### Git Message Hook
+
 ```bash
 # Install git hook for automatic JIRA ticket prefixing
 catalyst install git-message
@@ -192,6 +197,43 @@ catalyst install git-message --force
 
 # Verbose output during installation
 catalyst install git-message --verbose
+```
+
+#### Package Management
+
+```bash
+# Install/update Homebrew packages from configuration
+catalyst install packages
+
+# Preview what would be installed/updated
+catalyst install packages --dry-run
+
+# Force reinstall packages even if already installed
+catalyst install packages --force
+
+# Show detailed output during operations
+catalyst install packages --verbose
+```
+
+**Package Management Features:**
+- Automatic Homebrew installation if not present
+- Reads package list from `.catalyst.yml` (brewPackages section)
+- Default packages: `swiftlint`, `swiftformat`, `xcodes`
+- Smart update detection - only updates outdated packages
+- Interactive confirmation before making changes
+
+**Configuration Example:**
+```yaml
+# .catalyst.yml
+author: "Your Name"
+organizationName: "Your Company"
+
+# Homebrew packages to manage
+brewPackages:
+  - swiftlint
+  - swiftformat
+  - xcodes
+  - mint          # Add additional packages as needed
 ```
 
 ### `catalyst reset-spm`
@@ -356,6 +398,13 @@ Local configuration overrides global settings.
 author: "John Doe"
 organizationName: "MyCompany"
 bundleIdentifierPrefix: "com.mycompany"
+
+# Homebrew packages to install/update
+brewPackages:
+  - swiftlint
+  - swiftformat
+  - xcodes
+  - mint
 
 # Module paths (overrides default locations)
 paths:

@@ -59,7 +59,7 @@ public enum CatalystError: LocalizedError {
             """
         case .workspaceModificationFailed(_):
             return "Check that the workspace file is not open in Xcode and that you have write permissions."
-        case .templateNotFound(let name):
+        case .templateNotFound(_):
             return "Available templates: core, feature. Use 'catalyst template list' to see all available templates."
         case .templateRenderingFailed(_, _):
             return "Check the template syntax and ensure all required variables are provided."
