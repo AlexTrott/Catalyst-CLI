@@ -38,7 +38,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Git
@@ -167,6 +167,7 @@ jobs:
         id: create-pr
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           script: |
             const newVersion = '${{ steps.bump.outputs.new_version }}';
             const currentVersion = '${{ steps.current-version.outputs.current_version }}';
