@@ -45,6 +45,7 @@ public struct ListCommand: AsyncParsableCommand {
     }
 
     private func runWorkspaceSearch() async throws {
+        Console.printMiniBanner()
         Console.printHeader("Workspace Contents")
 
         guard let workspacePath = FileManager.default.findWorkspace() else {
@@ -73,6 +74,7 @@ public struct ListCommand: AsyncParsableCommand {
     }
 
     private func runRecursiveSearch() async throws {
+        Console.printMiniBanner()
         Console.printHeader("Recursive Module Search")
 
         let basePath = searchPath ?? FileManager.default.currentDirectoryPath

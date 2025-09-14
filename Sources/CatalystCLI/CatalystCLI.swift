@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import CatalystCore
+import Utilities
 
 /// Catalyst CLI - A Swift CLI tool for iOS module generation and management.
 ///
@@ -58,6 +59,21 @@ struct Catalyst: AsyncParsableCommand {
     init() {}
 
     mutating func run() async throws {
+        Console.printBanner()
+
+        // Show some helpful tips
+        Console.printBoxed("""
+        🚀 Quick Start:
+        • catalyst new feature MyFeature  # Creates feature + MicroApp
+        • catalyst new core MyCore        # Creates core module
+        • catalyst doctor                 # Check your environment
+        • catalyst --help                 # See all commands
+        """, style: .rounded)
+
+        Console.newLine()
+        Console.printGradientText("Ready to accelerate your iOS development! ⚡")
+        Console.newLine()
+
         print(Catalyst.helpMessage())
     }
 }

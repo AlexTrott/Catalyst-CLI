@@ -25,7 +25,8 @@ public struct DoctorCommand: AsyncParsableCommand {
     public init() {}
 
     public mutating func run() async throws {
-        Console.printHeader("Catalyst Environment Diagnostics")
+        Console.printMiniBanner()
+        Console.printHeader("Environment Diagnostics")
 
         var allChecks: [DiagnosticCheck] = []
 
@@ -571,10 +572,12 @@ public struct DoctorCommand: AsyncParsableCommand {
             }
         }
 
+        Console.newLine()
         if errors == 0 && warnings == 0 {
-            Console.printEmoji("🎉", message: "All checks passed! Catalyst is ready to use.")
+            Console.printRainbow("🎉 ALL SYSTEMS GO! 🎉")
+            Console.printBoxed("Catalyst is ready to use!", style: .rounded)
         } else if errors == 0 {
-            Console.printEmoji("⚠️", message: "Catalyst should work, but consider addressing the warnings above.")
+            Console.printBoxed("⚠️ Catalyst should work, but consider addressing the warnings above.", style: .rounded)
         } else {
             Console.print("Please address the critical errors above before using Catalyst.", type: .error)
         }

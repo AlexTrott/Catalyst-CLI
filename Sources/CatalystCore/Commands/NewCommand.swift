@@ -101,6 +101,9 @@ public struct NewCommand: AsyncParsableCommand {
     public init() {}
 
     public mutating func run() async throws {
+        // Show the awesome banner
+        Console.printBanner()
+
         Console.printHeader("Creating New Module")
 
         // Resolve target path first
@@ -117,28 +120,34 @@ public struct NewCommand: AsyncParsableCommand {
             return
         }
 
-        // Create the module
+        // Create the module with fancy progress
         if configuration.type == .microapp {
             try await createMicroApp(configuration)
         } else {
             try await createModule(configuration)
         }
 
-        // Success message
-        Console.printEmoji("✅", message: "Module '\(moduleName)' created successfully!")
+        // Success celebration
+        Console.newLine()
+        Console.printRainbow("🎉 SUCCESS! 🎉")
+        Console.printBoxed("Module '\(moduleName)' created successfully!", style: .rounded)
 
         // Show appropriate location based on module type
         if configuration.type == .feature {
-            Console.print("Location: \(configuration.path)/\(moduleName)/", type: .detail)
-            Console.print("  Feature Module: \(moduleName)/\(moduleName)", type: .detail)
-            Console.print("  MicroApp: \(moduleName)/\(moduleName)App", type: .detail)
+            Console.newLine()
+            Console.print("📁 Created at: \(configuration.path)/\(moduleName)/", type: .info)
+            Console.print("  🎯 Feature Module: \(moduleName)/\(moduleName)", type: .detail)
+            Console.print("  📱 MicroApp: \(moduleName)/\(moduleName)App", type: .detail)
         } else {
-            Console.print("Location: \(configuration.path)/\(moduleName)", type: .detail)
+            Console.print("📁 Location: \(configuration.path)/\(moduleName)", type: .info)
         }
 
         if let workspace = FileManager.default.findWorkspace() {
-            Console.print("Added to workspace: \(workspace)", type: .detail)
+            Console.print("🔗 Added to workspace: \(workspace)", type: .success)
         }
+
+        Console.newLine()
+        Console.printGradientText("Happy coding! ⚡")
     }
 
     private func resolveTargetPath() throws -> String {
