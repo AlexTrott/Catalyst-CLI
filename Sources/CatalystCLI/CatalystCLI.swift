@@ -50,6 +50,7 @@ struct Catalyst: AsyncParsableCommand {
         subcommands: [
             NewCommand.self,
             InstallCommand.self,
+            ResetSpmCommand.self,
             MicroAppCommand.self,
             ListCommand.self,
             ConfigCommand.self,
@@ -70,6 +71,7 @@ struct Catalyst: AsyncParsableCommand {
         • catalyst new feature MyFeature  # Creates feature + MicroApp
         • catalyst new core MyCore        # Creates core module
         • catalyst install git-message    # Auto-prefix commits with JIRA tickets
+        • catalyst reset-spm              # Clean Package.resolved conflicts
         • catalyst doctor                 # Check your environment
         • catalyst --help                 # See all commands
         """, style: .rounded)

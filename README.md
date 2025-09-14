@@ -65,6 +65,9 @@ catalyst new feature AuthenticationFeature
 
 # Install git hook for JIRA ticket prefixing
 catalyst install git-message
+
+# Clean Package.resolved conflicts
+catalyst reset-spm
 ```
 
 ### 3. Configure Defaults (Optional)
@@ -137,6 +140,42 @@ catalyst install git-message --force
 # Verbose output during installation
 catalyst install git-message --verbose
 ```
+
+### `catalyst reset-spm`
+
+Find and delete Package.resolved files to resolve SPM dependency conflicts.
+
+```bash
+# Find and delete with confirmation
+catalyst reset-spm
+
+# Preview what would be deleted without actually deleting
+catalyst reset-spm --dry-run
+
+# Delete without confirmation prompt
+catalyst reset-spm --force
+
+# Show detailed output during operation
+catalyst reset-spm --verbose
+
+# Search in specific directory
+catalyst reset-spm --path ./MyProject
+
+# Search only in specified directory (no recursion)
+catalyst reset-spm --no-recursive
+```
+
+**Use Cases:**
+- Resolve SPM dependency version conflicts across modules
+- Force fresh dependency resolution after modular changes
+- Clean up stale Package.resolved files in complex project structures
+- Troubleshoot "unable to resolve dependencies" errors
+
+**Safety Features:**
+- User confirmation before deletion (unless `--force` used)
+- Dry-run mode to preview changes
+- Excludes common build/cache directories (.build, DerivedData, etc.)
+- Detailed error reporting for failed deletions
 
 **Git Message Hook:**
 - Automatically prefix commit messages with JIRA tickets from branch names
@@ -481,6 +520,12 @@ MyApp/
 - Tickets must be uppercase letters followed by hyphen and numbers
 - Use `[NO-TICKET]` branches for commits without associated tickets
 
+**"SPM dependency conflicts"**
+- Run `catalyst reset-spm` to clean Package.resolved files
+- Use `--dry-run` to preview files that would be deleted
+- After cleanup, run `swift package resolve` in affected modules
+- Consider using specific paths with `--path` for targeted cleaning
+
 ### Getting Help
 
 ```bash
@@ -490,6 +535,7 @@ catalyst --help
 # Command-specific help
 catalyst new --help
 catalyst config --help
+catalyst reset-spm --help
 
 # Environment diagnostics
 catalyst doctor --verbose
