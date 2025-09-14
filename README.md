@@ -274,15 +274,15 @@ catalyst reset-spm --no-recursive
 
 **Git Message Hook:**
 - Automatically prefix commit messages with JIRA tickets from branch names
-- Supports patterns like: `UKFIM-123`, `ABC-999`, `PROJECT-1234`
+- Supports patterns like: `JIRA-123`, `ABC-999`, `PROJECT-1234`
 - Falls back to `[NO-TICKET]` if no ticket found in branch name
 - Smart handling: skips merges, rebases, and already-prefixed messages
 
 **Examples:**
 ```bash
-# Branch: feature/UKFIM-123-new-login
+# Branch: feature/JIRA-123-new-login
 $ git commit -m "Add OAuth integration"
-# Result: [UKFIM-123] Add OAuth integration
+# Result: [JIRA-123] Add OAuth integration
 
 # Branch: hotfix/emergency-fix
 $ git commit -m "Fix critical bug"
