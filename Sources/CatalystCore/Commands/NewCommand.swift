@@ -9,6 +9,34 @@ import WorkspaceManager
 import ConfigurationManager
 import MicroAppGenerator
 
+/// Create new Swift modules from templates.
+///
+/// The `NewCommand` supports creating three types of modules:
+/// - **Core modules**: Business logic, services, and models
+/// - **Feature modules**: UI components, view controllers, and coordinators
+/// - **MicroApps**: Complete iOS applications for isolated testing
+///
+/// ## Examples
+///
+/// Create a core module for business logic:
+/// ```bash
+/// catalyst new core NetworkingCore
+/// ```
+///
+/// Create a feature module with custom options:
+/// ```bash
+/// catalyst new feature ShoppingCart --author "John Doe" --path "./Features"
+/// ```
+///
+/// Create a MicroApp for isolated testing:
+/// ```bash
+/// catalyst new microapp TestApp
+/// ```
+///
+/// Preview creation without making changes:
+/// ```bash
+/// catalyst new core DataLayer --dry-run
+/// ```
 public struct NewCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "new",

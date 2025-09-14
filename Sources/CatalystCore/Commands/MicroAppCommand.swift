@@ -374,7 +374,7 @@ public struct ListMicroAppCommand: ParsableCommand {
         Console.print("Usage:", type: .info)
         Console.printList([
             "Open: cd \(directory)/<MicroApp> && open *.xcodeproj",
-            "Rebuild project: cd \(directory)/<MicroApp> && xcodegen generate"
+            "Regenerate project: catalyst microapp create <feature-name> --dry-run=false"
         ])
     }
 

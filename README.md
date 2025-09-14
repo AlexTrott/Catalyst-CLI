@@ -2,8 +2,8 @@
 
 A modern Swift CLI tool for iOS module generation and management.
 
-[![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-macOS-blue.svg)](https://developer.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-6.0+-orange.svg)](https://swift.org)
+[![Platform](https://img.shields.io/badge/Platform-macOS%2015+-blue.svg)](https://developer.apple.com/macos/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## Overview
@@ -13,20 +13,21 @@ Catalyst accelerates iOS development by automating the creation of modular Swift
 ### Key Features
 
 - 🚀 **Rapid Module Creation**: Generate Core and Feature modules in seconds
-- 📱 **MicroApp Support**: Create isolated testing environments for features
-- 🏗️ **Workspace Integration**: Automatically manage Xcode workspaces
-- 🎨 **Customizable Templates**: Use built-in templates or create your own
-- ⚙️ **Flexible Configuration**: Project-specific and global settings
-- 🩺 **Environment Validation**: Built-in diagnostics and health checks
-- 🎯 **Developer-Friendly**: Colorful output and helpful error messages
+- 📱 **MicroApp Support**: Create isolated testing environments for features with programmatic XcodeGen integration
+- 🏗️ **Workspace Integration**: Automatically manage Xcode workspaces and projects
+- 🎨 **Customizable Templates**: Use built-in templates or create your own with Stencil templating
+- ⚙️ **Flexible Configuration**: Project-specific and global YAML-based settings
+- 🩺 **Environment Validation**: Built-in diagnostics and health checks with automatic fixes
+- 🎯 **Developer-Friendly**: Colorful output, progress indicators, and helpful error messages
+- 🔧 **Zero External Dependencies**: Uses XcodeGenKit programmatically - no CLI installations required
 
 ## Installation
 
 ### Prerequisites
 
-- macOS 12.0+
-- Xcode 14.0+
-- Swift 5.9+
+- macOS 15.0+
+- Xcode 16.0+
+- Swift 6.0+
 
 ### Install from Source
 
@@ -88,6 +89,7 @@ catalyst new <type> <name>
 # Examples
 catalyst new core UserManagement
 catalyst new feature LoginFlow
+catalyst new microapp TestFeature
 
 # With options
 catalyst new feature ShoppingCart \
@@ -97,11 +99,15 @@ catalyst new feature ShoppingCart \
 
 # Preview without creating
 catalyst new core DataLayer --dry-run
+
+# Force overwrite existing modules
+catalyst new feature ExistingFeature --force
 ```
 
 **Module Types:**
 - `core`: Business logic, services, and models
 - `feature`: UI components, view controllers, and coordinators
+- `microapp`: Complete iOS applications for isolated testing
 
 ### `catalyst list`
 
@@ -116,6 +122,12 @@ catalyst list --verbose
 
 # Filter by type
 catalyst list --type packages
+
+# Show full paths instead of relative
+catalyst list --full-paths
+
+# Recursive search through nested folders
+catalyst list --recursive
 ```
 
 ### `catalyst config`
@@ -154,16 +166,19 @@ catalyst template show CoreModule
 catalyst template validate FeatureModule
 ```
 
-### `catalyst microapp` (Coming Soon)
+### `catalyst microapp`
 
-Create MicroApps for isolated feature testing.
+Create and manage MicroApps for isolated feature testing. **Note**: This command is deprecated. Use `catalyst new microapp` instead.
 
 ```bash
-# Create a MicroApp for a feature
-catalyst microapp create AuthenticationFeature
+# Create a MicroApp for a feature (deprecated)
+catalyst microapp create AuthenticationFeature --output ./MicroApps
 
 # List existing MicroApps
-catalyst microapp list
+catalyst microapp list --verbose
+
+# Preview creation without making changes
+catalyst microapp create TestFeature --dry-run
 ```
 
 ### `catalyst doctor`
@@ -200,11 +215,11 @@ author: "John Doe"
 organizationName: "MyCompany"
 bundleIdentifierPrefix: "com.mycompany"
 
-# Module defaults
-swiftVersion: "5.9"
-defaultPlatforms:
-  - ".iOS(.v16)"
-  - ".macOS(.v12)"
+# Module paths (overrides default locations)
+paths:
+  coreModules: "./Core"
+  featureModules: "./Features"
+  microApps: "./MicroApps"
 
 # Template settings
 templatesPath:
@@ -218,7 +233,6 @@ defaultTemplateVariables:
 # Output settings
 verbose: false
 colorOutput: true
-defaultModulesPath: "./Modules"
 ```
 
 ### Example Workflow
@@ -298,15 +312,31 @@ Catalyst works well with modular iOS project structures:
 ```
 MyApp/
 ├── MyApp.xcworkspace
-├── MyApp/                  # Main app target
-├── Modules/               # Generated modules
-│   ├── NetworkingCore/    # Core module
-│   ├── AuthFeature/      # Feature module
-│   └── DataLayer/        # Another core module
-├── MicroApps/            # Isolated test apps
-│   ├── AuthApp/         # MicroApp for AuthFeature
-│   └── NetworkApp/      # MicroApp for NetworkingCore
-└── .catalyst.yml         # Local configuration
+├── MyApp/                    # Main app target
+├── Modules/                 # Generated modules
+│   ├── NetworkingCore/      # Core module
+│   │   ├── Package.swift
+│   │   ├── Sources/
+│   │   └── Tests/
+│   ├── AuthFeature/        # Feature module
+│   │   ├── Package.swift
+│   │   ├── Sources/
+│   │   └── Tests/
+│   └── DataLayer/          # Another core module
+├── MicroApps/              # Isolated test apps
+│   ├── AuthFeatureApp/     # MicroApp for AuthFeature
+│   │   ├── project.yml     # XcodeGen configuration
+│   │   ├── AuthFeatureApp.xcodeproj
+│   │   ├── AuthFeatureApp/
+│   │   │   ├── AppDelegate.swift
+│   │   │   ├── SceneDelegate.swift
+│   │   │   ├── ContentView.swift
+│   │   │   └── DependencyContainer.swift
+│   │   ├── Assets.xcassets/
+│   │   ├── LaunchScreen.storyboard
+│   │   └── Info.plist
+│   └── NetworkingCoreApp/  # MicroApp for NetworkingCore
+└── .catalyst.yml           # Local configuration
 ```
 
 ## Best Practices
@@ -376,6 +406,70 @@ swift build
 swift test
 ```
 
+### Generating Documentation
+
+Catalyst CLI includes comprehensive DocC documentation. Generate and view the documentation with these commands:
+
+#### Generate Documentation
+
+```bash
+# Generate documentation for all modules
+swift package generate-documentation
+
+# Generate documentation for a specific target
+swift package generate-documentation --target CatalystCore
+```
+
+#### Preview Documentation Locally
+
+```bash
+# Start local documentation server
+swift package --disable-sandbox preview-documentation --target CatalystCore
+
+# This will start a local server (typically at http://localhost:8080)
+# and automatically open the documentation in your default browser
+```
+
+#### Build Static Documentation
+
+```bash
+# Generate static HTML documentation
+swift package generate-documentation --target CatalystCore \
+  --output-path ./docs \
+  --hosting-base-path /catalyst-cli/
+
+# This creates a ./docs directory with standalone HTML files
+# suitable for hosting on GitHub Pages or other static hosting
+```
+
+#### View Documentation
+
+The documentation includes:
+
+- **Getting Started Guide**: Complete setup and usage instructions
+- **Configuration Reference**: Detailed configuration options
+- **Template System**: Custom template creation and usage
+- **API Reference**: Complete programmatic interface documentation
+- **Command Reference**: All CLI commands with examples
+
+**Key Documentation Sections:**
+- [Getting Started](http://localhost:8080/documentation/catalystcore/gettingstarted) - Your first steps with Catalyst
+- [Configuration](http://localhost:8080/documentation/catalystcore/configuration) - Customizing Catalyst for your project
+- [Templates](http://localhost:8080/documentation/catalystcore/templates) - Creating and using custom templates
+- [API Reference](http://localhost:8080/documentation/catalystcore) - Complete API documentation
+
+#### Documentation Development
+
+When contributing to documentation:
+
+```bash
+# Start preview server for live editing
+swift package --disable-sandbox preview-documentation --target CatalystCore
+
+# Edit .md files in Sources/CatalystCore/CatalystCore.docc/
+# Documentation updates automatically as you save files
+```
+
 ### Project Structure
 
 ```
@@ -385,12 +479,14 @@ Sources/
 ├── TemplateEngine/        # Stencil integration
 ├── WorkspaceManager/      # Xcode workspace handling
 ├── PackageGenerator/      # Swift package creation
+├── MicroAppGenerator/     # MicroApp creation with XcodeGenKit
 ├── ConfigurationManager/  # YAML configuration
 └── Utilities/            # Shared utilities
 
 Templates/
 ├── CoreModule/           # Core module templates
-└── FeatureModule/       # Feature module templates
+├── FeatureModule/       # Feature module templates
+└── MicroAppTemplates/   # MicroApp templates
 ```
 
 ## Contributing

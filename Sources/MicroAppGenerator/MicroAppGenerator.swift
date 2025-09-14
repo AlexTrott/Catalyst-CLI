@@ -3,7 +3,39 @@ import TemplateEngine
 import PathKit
 import Files
 import Yams
+import XcodeGenKit
+import ProjectSpec
 
+/// Generates complete iOS MicroApps for isolated feature testing.
+///
+/// The `MicroAppGenerator` creates standalone iOS applications that can be used to test
+/// individual features in isolation. Each MicroApp includes:
+/// - Complete iOS app structure with AppDelegate and SceneDelegate
+/// - XcodeGen configuration for programmatic project generation
+/// - Dependency container for feature integration
+/// - Assets and resources
+/// - Launch screen and Info.plist
+///
+/// ## Features
+///
+/// - **Programmatic Xcode project generation** using XcodeGenKit (no external dependencies)
+/// - **Template-based code generation** with Stencil templating engine
+/// - **Automatic dependency resolution** for feature modules
+/// - **Complete iOS app boilerplate** ready to run
+///
+/// ## Usage
+///
+/// ```swift
+/// let generator = MicroAppGenerator()
+/// let config = MicroAppConfiguration(
+///     featureName: "AuthenticationFeature",
+///     outputPath: "./MicroApps",
+///     bundleIdentifier: "com.example.authapp",
+///     author: "John Doe",
+///     organizationName: "Example Corp"
+/// )
+/// try generator.generateMicroApp(config)
+/// ```
 public class MicroAppGenerator {
     private let templateEngine: TemplateEngine
     private let fileManager: FileManager
@@ -13,7 +45,14 @@ public class MicroAppGenerator {
         self.fileManager = FileManager.default
     }
 
-    /// Generate a MicroApp for a Feature Module
+    /// Generate a MicroApp for a Feature Module.
+    ///
+    /// Creates a complete iOS application project for testing a specific feature module in isolation.
+    /// The generated MicroApp includes all necessary boilerplate code, project configuration,
+    /// and assets to run immediately.
+    ///
+    /// - Parameter configuration: The MicroApp configuration specifying feature name, paths, and metadata
+    /// - Throws: ``MicroAppError`` if generation fails due to file system issues or invalid configuration
     public func generateMicroApp(_ configuration: MicroAppConfiguration) throws {
         let microAppPath = Path(configuration.outputPath) + "\(configuration.featureName)App"
 
@@ -517,15 +556,7 @@ public class MicroAppGenerator {
     // MARK: - Xcode Project Generation
 
     private func generateXcodeProject(at path: Path) throws {
-        // Check if XcodeGen is available
-        do {
-            let _ = try Shell.run("which xcodegen", silent: true)
-        } catch {
-            print("⚠️  XcodeGen not found. Install with 'brew install xcodegen' to generate Xcode project")
-            print("   Project files created, but .xcodeproj generation skipped")
-            print("   You can manually run 'xcodegen generate' in the MicroApp directory later")
-            return
-        }
+        print("🔨 Generating Xcode project using XcodeGenKit...")
 
         // Ensure project.yml exists
         let projectYmlPath = path + "project.yml"
@@ -533,15 +564,18 @@ public class MicroAppGenerator {
             throw MicroAppError.invalidConfiguration("project.yml not found at \(projectYmlPath)")
         }
 
-        // Run XcodeGen to generate the project
         do {
-            print("🔨 Generating Xcode project using XcodeGen...")
-            let _ = try Shell.run("cd '\(path.string)' && xcodegen generate", silent: false)
-            print("✅ Xcode project generated successfully")
+            // Use XcodeGenKit to generate the project programmatically
+            let project = try Project(path: projectYmlPath)
+            let projectGenerator = ProjectGenerator(project: project)
+
+            let generatedProject = try projectGenerator.generateXcodeProject(userName: NSUserName())
+            let projectPath = path + "\(project.name).xcodeproj"
+
+            try generatedProject.write(path: projectPath, override: true)
+            print("✅ Xcode project generated successfully using XcodeGenKit")
         } catch {
-            print("⚠️  Failed to generate Xcode project: \(error.localizedDescription)")
-            print("   You can manually run 'xcodegen generate' in the MicroApp directory")
-            print("   Directory: \(path.string)")
+            throw MicroAppError.projectGenerationFailed(error)
         }
     }
 }
@@ -602,27 +636,3 @@ private extension DateFormatter {
     }()
 }
 
-// Shell execution for XcodeGen
-private struct Shell {
-    static func run(_ command: String, silent: Bool = true) throws -> String {
-        let process = Process()
-        let pipe = Pipe()
-
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.arguments = ["-c", command]
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-
-        try process.run()
-        process.waitUntilExit()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
-
-        if process.terminationStatus != 0 {
-            throw MicroAppError.projectGenerationFailed(NSError(domain: "ShellError", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: output]))
-        }
-
-        return output
-    }
-}
