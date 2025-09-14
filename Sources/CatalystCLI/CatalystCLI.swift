@@ -46,7 +46,7 @@ struct Catalyst: AsyncParsableCommand {
           catalyst doctor
           catalyst config set author "John Doe"
         """,
-        version: "1.0.0",
+        version: "0.1.0",
         subcommands: [
             NewCommand.self,
             InstallCommand.self,

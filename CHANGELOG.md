@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-09-14
+
+### Added
+- Version bump to 0.1.0
+
+
 ### Added
 - GitHub Actions workflow for automated releases
 - Installation script with architecture auto-detection
