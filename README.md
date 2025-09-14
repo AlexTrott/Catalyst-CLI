@@ -13,7 +13,7 @@ Catalyst accelerates iOS development by automating the creation of modular Swift
 ### Key Features
 
 - 🚀 **Rapid Module Creation**: Generate Core and Feature modules in seconds
-- 📱 **MicroApp Support**: Create isolated testing environments for features with programmatic XcodeGen integration
+- 📱 **Automatic MicroApp Generation**: Feature modules now include companion MicroApps automatically
 - 🏗️ **Workspace Integration**: Automatically manage Xcode workspaces and projects
 - 🎨 **Customizable Templates**: Use built-in templates or create your own with Stencil templating
 - ⚙️ **Flexible Configuration**: Project-specific and global YAML-based settings
@@ -59,7 +59,7 @@ catalyst doctor
 # Create a Core module for business logic
 catalyst new core NetworkingCore
 
-# Create a Feature module for UI components
+# Create a Feature module with companion MicroApp
 catalyst new feature AuthenticationFeature
 ```
 
@@ -106,8 +106,15 @@ catalyst new feature ExistingFeature --force
 
 **Module Types:**
 - `core`: Business logic, services, and models
-- `feature`: UI components, view controllers, and coordinators
-- `microapp`: Complete iOS applications for isolated testing
+- `feature`: UI components with automatic companion MicroApp for testing
+- `microapp`: Standalone iOS applications for isolated testing
+
+**Note:** When creating a feature module, Catalyst automatically generates both the reusable Swift Package and a companion MicroApp in a structured folder:
+```
+FeatureName/
+├── FeatureName/        # The Feature Module package
+└── FeatureNameApp/     # The companion MicroApp
+```
 
 ### `catalyst list`
 
@@ -168,7 +175,11 @@ catalyst template validate FeatureModule
 
 ### `catalyst microapp`
 
-Create and manage MicroApps for isolated feature testing. **Note**: This command is deprecated. Use `catalyst new microapp` instead.
+Create and manage MicroApps for isolated feature testing.
+
+**Note**: This command is deprecated. For new projects:
+- Use `catalyst new feature` to create a feature with automatic MicroApp
+- Use `catalyst new microapp` for standalone MicroApps
 
 ```bash
 # Create a MicroApp for a feature (deprecated)
@@ -257,7 +268,8 @@ Catalyst uses [Stencil](https://github.com/stencil-project/Stencil) for template
 ### Built-in Templates
 
 - **CoreModule**: Business logic and services
-- **FeatureModule**: UI components and coordinators
+- **FeatureModule**: UI components and coordinators (includes automatic MicroApp generation)
+- **MicroApp**: Standalone iOS application template
 
 ### Template Variables
 
@@ -313,29 +325,31 @@ Catalyst works well with modular iOS project structures:
 MyApp/
 ├── MyApp.xcworkspace
 ├── MyApp/                    # Main app target
-├── Modules/                 # Generated modules
+├── Core/                    # Core modules
 │   ├── NetworkingCore/      # Core module
 │   │   ├── Package.swift
 │   │   ├── Sources/
 │   │   └── Tests/
-│   ├── AuthFeature/        # Feature module
-│   │   ├── Package.swift
-│   │   ├── Sources/
-│   │   └── Tests/
 │   └── DataLayer/          # Another core module
-├── MicroApps/              # Isolated test apps
-│   ├── AuthFeatureApp/     # MicroApp for AuthFeature
-│   │   ├── project.yml     # XcodeGen configuration
-│   │   ├── AuthFeatureApp.xcodeproj
-│   │   ├── AuthFeatureApp/
-│   │   │   ├── AppDelegate.swift
-│   │   │   ├── SceneDelegate.swift
-│   │   │   ├── ContentView.swift
-│   │   │   └── DependencyContainer.swift
-│   │   ├── Assets.xcassets/
-│   │   ├── LaunchScreen.storyboard
-│   │   └── Info.plist
-│   └── NetworkingCoreApp/  # MicroApp for NetworkingCore
+├── Features/               # Feature modules with MicroApps
+│   └── AuthFeature/        # Feature wrapper folder
+│       ├── AuthFeature/    # Feature module package
+│       │   ├── Package.swift
+│       │   ├── Sources/
+│       │   └── Tests/
+│       └── AuthFeatureApp/  # Companion MicroApp
+│           ├── project.yml     # XcodeGen configuration
+│           ├── AuthFeatureApp.xcodeproj
+│           ├── AuthFeatureApp/
+│           │   ├── AppDelegate.swift
+│           │   ├── SceneDelegate.swift
+│           │   ├── ContentView.swift
+│           │   └── DependencyContainer.swift
+│           ├── Assets.xcassets/
+│           ├── LaunchScreen.storyboard
+│           └── Info.plist
+├── MicroApps/              # Standalone test apps
+│   └── TestApp/            # Standalone MicroApp
 └── .catalyst.yml           # Local configuration
 ```
 
@@ -344,9 +358,29 @@ MyApp/
 ### Module Organization
 
 - **Core Modules**: Pure business logic, no UI dependencies
-- **Feature Modules**: Complete user-facing features
+- **Feature Modules**: Complete user-facing features with automatic companion MicroApps
+- **MicroApps**: Automatically created for features, or standalone for testing
 - Keep modules focused and single-purpose
 - Use clear, descriptive names
+
+### Feature Development Workflow
+
+1. Create a new feature with automatic MicroApp:
+   ```bash
+   catalyst new feature ShoppingCart --path ./Features
+   ```
+
+2. Navigate to the generated structure:
+   ```
+   Features/ShoppingCart/
+   ├── ShoppingCart/        # Your feature module
+   └── ShoppingCartApp/     # Ready-to-run test app
+   ```
+
+3. Open the MicroApp's Xcode project to test your feature in isolation:
+   ```bash
+   open Features/ShoppingCart/ShoppingCartApp/ShoppingCartApp.xcodeproj
+   ```
 
 ### Template Customization
 
@@ -495,11 +529,11 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ### Areas for Contribution
 
-- MicroApp generation implementation
 - Additional template types
 - IDE integrations
 - Documentation improvements
 - Bug fixes and optimizations
+- Enhanced MicroApp features
 
 ## License
 

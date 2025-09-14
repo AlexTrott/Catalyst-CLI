@@ -93,6 +93,10 @@ public class MicroAppGenerator {
     private func generateProjectYMLContent(_ configuration: MicroAppConfiguration) -> String {
         let bundleId = configuration.bundleIdentifier ?? "com.catalyst.\(configuration.featureName.lowercased())app"
 
+        // When creating as part of a feature module, the package is a sibling directory
+        // Otherwise, it's in the parent directory
+        let packagePath = configuration.isLocalPackage ? "../\(configuration.featureName)" : "../../\(configuration.featureName)"
+
         return """
         name: \(configuration.featureName)App
 
@@ -101,7 +105,7 @@ public class MicroAppGenerator {
 
         packages:
           \(configuration.featureName):
-            path: ../\(configuration.featureName)
+            path: \(packagePath)
 
         targets:
           \(configuration.featureName)App:
@@ -588,19 +592,22 @@ public struct MicroAppConfiguration {
     public let bundleIdentifier: String?
     public let author: String?
     public let organizationName: String?
+    public let isLocalPackage: Bool
 
     public init(
         featureName: String,
         outputPath: String = "./MicroApps",
         bundleIdentifier: String? = nil,
         author: String? = nil,
-        organizationName: String? = nil
+        organizationName: String? = nil,
+        isLocalPackage: Bool = false
     ) {
         self.featureName = featureName
         self.outputPath = outputPath
         self.bundleIdentifier = bundleIdentifier
         self.author = author
         self.organizationName = organizationName
+        self.isLocalPackage = isLocalPackage
     }
 }
 

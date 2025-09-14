@@ -25,7 +25,7 @@ public enum ModuleType: String, CaseIterable {
         case .core:
             return "A module containing business logic, services, and models"
         case .feature:
-            return "A module containing UI components, view controllers, and coordinators"
+            return "A module containing UI components with automatic companion MicroApp"
         case .microapp:
             return "A standalone iOS app for testing a single feature in isolation"
         }
@@ -218,7 +218,9 @@ public struct ModuleConfiguration {
             "ModuleType": type.rawValue,
             "SwiftVersion": swiftVersion,
             "Platforms": platforms.map { $0.description },
-            "Dependencies": dependencies.map { $0.name },
+            "Dependencies": dependencies.map { dep in
+                ["name": dep.name, "url": dep.url ?? "", "version": dep.version ?? "1.0.0"]
+            },
             "Date": ISO8601DateFormatter().string(from: Date()),
             "Year": Calendar.current.component(.year, from: Date())
         ]

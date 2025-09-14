@@ -93,12 +93,18 @@ public class TemplateEngine {
             } else {
                 if child.extension == "stencil" {
                     // Render template file
-                    let templateName = child.string.replacingOccurrences(of: templateLoader.basePath.string + "/", with: "")
+                    // For files in template directories, we need to construct the proper template name
+                    // that Stencil can find in its search paths
+                    let components = child.string.components(separatedBy: "/Templates/")
+                    let templateName = components.count > 1 ? components[1] : child.lastComponent
                     let renderedContent = try renderTemplate(named: templateName, with: context)
 
                     // Remove .stencil extension from output
                     let outputFileName = outputPath.lastComponent.replacingOccurrences(of: ".stencil", with: "")
                     let finalOutputPath = outputPath.parent() + outputFileName
+
+                    // Ensure parent directory exists
+                    try finalOutputPath.parent().mkpath()
 
                     try renderedContent.write(
                         to: finalOutputPath.url,

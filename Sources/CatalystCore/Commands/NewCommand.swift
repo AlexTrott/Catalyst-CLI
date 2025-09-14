@@ -13,8 +13,21 @@ import MicroAppGenerator
 ///
 /// The `NewCommand` supports creating three types of modules:
 /// - **Core modules**: Business logic, services, and models
-/// - **Feature modules**: UI components, view controllers, and coordinators
+/// - **Feature modules**: UI components with companion MicroApp for testing
 /// - **MicroApps**: Complete iOS applications for isolated testing
+///
+/// ## Feature Module Creation
+///
+/// When creating a feature module, Catalyst now automatically generates both:
+/// - A reusable Swift Package for the feature
+/// - A companion MicroApp for isolated testing
+///
+/// The structure will be:
+/// ```
+/// FeatureName/
+///   ├── FeatureName/        # The Feature Module package
+///   └── FeatureNameApp/     # The companion MicroApp
+/// ```
 ///
 /// ## Examples
 ///
@@ -23,12 +36,12 @@ import MicroAppGenerator
 /// catalyst new core NetworkingCore
 /// ```
 ///
-/// Create a feature module with custom options:
+/// Create a feature module with companion MicroApp:
 /// ```bash
 /// catalyst new feature ShoppingCart --author "John Doe" --path "./Features"
 /// ```
 ///
-/// Create a MicroApp for isolated testing:
+/// Create a standalone MicroApp:
 /// ```bash
 /// catalyst new microapp TestApp
 /// ```
@@ -48,8 +61,13 @@ public struct NewCommand: AsyncParsableCommand {
         catalyst new microapp TestApp
         """,
         discussion: """
-        Creates a new Swift package module or MicroApp from a template. Supports Core modules for business logic,
-        Feature modules for UI components, and MicroApps for isolated testing environments.
+        Creates a new Swift package module or MicroApp from a template.
+
+        Core modules: Create business logic and service layers
+        Feature modules: Create UI components with automatic companion MicroApp for testing
+        MicroApps: Create standalone iOS applications for isolated testing
+
+        Note: Feature modules now automatically include a companion MicroApp in the same folder structure.
         """
     )
 
@@ -108,7 +126,15 @@ public struct NewCommand: AsyncParsableCommand {
 
         // Success message
         Console.printEmoji("✅", message: "Module '\(moduleName)' created successfully!")
-        Console.print("Location: \(configuration.path)/\(moduleName)", type: .detail)
+
+        // Show appropriate location based on module type
+        if configuration.type == .feature {
+            Console.print("Location: \(configuration.path)/\(moduleName)/", type: .detail)
+            Console.print("  Feature Module: \(moduleName)/\(moduleName)", type: .detail)
+            Console.print("  MicroApp: \(moduleName)/\(moduleName)App", type: .detail)
+        } else {
+            Console.print("Location: \(configuration.path)/\(moduleName)", type: .detail)
+        }
 
         if let workspace = FileManager.default.findWorkspace() {
             Console.print("Added to workspace: \(workspace)", type: .detail)
@@ -218,20 +244,86 @@ public struct NewCommand: AsyncParsableCommand {
 
         let templateEngine = TemplateEngine()
         let packageGenerator = PackageGenerator(templateEngine: templateEngine)
-        try packageGenerator.generatePackage(configuration)
 
-        Console.printStep(3, total: 4, message: "Adding to workspace...")
+        // For feature modules, create both the module and MicroApp
+        if configuration.type == .feature {
+            try await createFeatureWithMicroApp(configuration, templateEngine: templateEngine, packageGenerator: packageGenerator)
+        } else {
+            // For other module types, use the existing flow
+            try packageGenerator.generatePackage(configuration)
 
+            Console.printStep(3, total: 4, message: "Adding to workspace...")
+
+            if let workspacePath = FileManager.default.findWorkspace() {
+                let workspaceManager = WorkspaceManager()
+                let packagePath = (configuration.path as NSString).appendingPathComponent(configuration.name)
+
+                do {
+                    try workspaceManager.addPackageToWorkspace(
+                        packagePath: packagePath,
+                        workspacePath: workspacePath
+                    )
+                    Console.print("✓ Added package to workspace", type: .detail)
+                } catch {
+                    Console.print("⚠️  Could not add to workspace: \(error.localizedDescription)", type: .warning)
+                    Console.print("You can manually add the package to your workspace later", type: .detail)
+                }
+            } else {
+                Console.print("⚠️  No workspace found - package created but not added to workspace", type: .warning)
+                Console.print("Create an Xcode workspace to automatically include new packages", type: .detail)
+            }
+        }
+
+        Console.printStep(4, total: 4, message: "Finalizing setup...")
+    }
+
+    private func createFeatureWithMicroApp(_ configuration: ModuleConfiguration, templateEngine: TemplateEngine, packageGenerator: PackageGenerator) async throws {
+        // Create wrapper folder
+        let wrapperPath = (configuration.path as NSString).appendingPathComponent(configuration.name)
+        try FileManager.default.createDirectory(atPath: wrapperPath, withIntermediateDirectories: true, attributes: nil)
+
+        // Create Feature Module in wrapper/FeatureName
+        let featureConfiguration = ModuleConfiguration(
+            name: configuration.name,
+            type: configuration.type,
+            path: wrapperPath,
+            author: configuration.author,
+            organizationName: configuration.organizationName,
+            bundleIdentifier: configuration.bundleIdentifier,
+            swiftVersion: configuration.swiftVersion,
+            platforms: configuration.platforms,
+            dependencies: configuration.dependencies,
+            customTemplateVariables: configuration.customTemplateVariables
+        )
+        try packageGenerator.generatePackage(featureConfiguration)
+
+        Console.printStep(3, total: 4, message: "Creating companion MicroApp...")
+
+        // Create MicroApp in wrapper/FeatureNameApp
+        let microAppConfig = MicroAppConfiguration(
+            featureName: configuration.name,
+            outputPath: wrapperPath,
+            bundleIdentifier: configuration.bundleIdentifier,
+            author: configuration.author,
+            organizationName: configuration.organizationName,
+            isLocalPackage: true  // New parameter to indicate local package reference
+        )
+
+        let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
+        try microAppGenerator.generateMicroApp(microAppConfig)
+
+        // Add only the Feature Module to workspace
         if let workspacePath = FileManager.default.findWorkspace() {
             let workspaceManager = WorkspaceManager()
-            let packagePath = (configuration.path as NSString).appendingPathComponent(configuration.name)
+            let packagePath = (wrapperPath as NSString).appendingPathComponent(configuration.name)
 
             do {
                 try workspaceManager.addPackageToWorkspace(
                     packagePath: packagePath,
                     workspacePath: workspacePath
                 )
-                Console.print("✓ Added package to workspace", type: .detail)
+                Console.print("✓ Added feature package to workspace", type: .detail)
+                Console.print("✓ Created companion MicroApp at \(wrapperPath)/\(configuration.name)App", type: .detail)
             } catch {
                 Console.print("⚠️  Could not add to workspace: \(error.localizedDescription)", type: .warning)
                 Console.print("You can manually add the package to your workspace later", type: .detail)
@@ -240,8 +332,6 @@ public struct NewCommand: AsyncParsableCommand {
             Console.print("⚠️  No workspace found - package created but not added to workspace", type: .warning)
             Console.print("Create an Xcode workspace to automatically include new packages", type: .detail)
         }
-
-        Console.printStep(4, total: 4, message: "Finalizing setup...")
     }
 
     private func createMicroApp(_ configuration: ModuleConfiguration) async throws {

@@ -13,7 +13,10 @@ public struct MicroAppCommand: AsyncParsableCommand {
         catalyst microapp create <feature-name>  [DEPRECATED]
         """,
         discussion: """
-        Manage existing MicroApps. For creating new MicroApps, use 'catalyst new microapp <name>'.
+        Manage existing MicroApps. For creating new MicroApps, use:
+        - 'catalyst new feature <name>' for features with automatic companion MicroApp
+        - 'catalyst new microapp <name>' for standalone MicroApps
+
         The create subcommand is deprecated and will be removed in a future version.
         """,
         subcommands: [
