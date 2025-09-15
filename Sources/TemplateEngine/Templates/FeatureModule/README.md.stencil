@@ -1,0 +1,376 @@
+# {{ModuleName}}
+
+A feature module providing UI components and navigation for {{ModuleName|snakeCase|replace:"_":" "|capitalize}} functionality.
+
+## Overview
+
+{{ModuleName}} is a feature Swift package that implements the {{ModuleName|snakeCase|replace:"_":" "|lowercase}} user interface using SwiftUI and UIKit. This module follows the MVVM (Model-View-ViewModel) architecture pattern and includes navigation coordination for a complete feature implementation.
+
+## Architecture
+
+This module follows a clean MVVM architecture:
+
+```
+{{ModuleName}}/
+├── Views/         # SwiftUI views and UIKit view controllers
+├── ViewModels/    # ViewModels for business logic
+├── Coordinators/  # Navigation coordinators
+├── Models/        # Feature-specific models
+└── {{ModuleName}}.swift  # Main feature interface
+```
+
+## Features
+
+- **MVVM Architecture**: Clean separation between UI and business logic
+- **SwiftUI Views**: Modern declarative UI components
+- **Navigation Coordination**: Coordinator pattern for navigation flow
+- **ViewModel State Management**: Reactive state management with Combine
+- **MicroApp Support**: Includes companion MicroApp for isolated testing
+
+## Installation
+
+### Swift Package Manager
+
+Add this package to your `Package.swift` dependencies:
+
+```swift
+dependencies: [
+    .package(path: "../{{ModuleName}}")
+]
+```
+
+Then add it to your target dependencies:
+
+```swift
+.target(
+    name: "YourApp",
+    dependencies: ["{{ModuleName}}"]
+)
+```
+
+## Usage
+
+### Basic Integration
+
+```swift
+import {{ModuleName}}
+import UIKit
+
+// Create the feature entry point
+let feature = {{ModuleName}}()
+
+// Get the main view controller
+let viewController = feature.createViewController()
+
+// Present or push the view controller
+navigationController.pushViewController(viewController, animated: true)
+```
+
+### SwiftUI Integration
+
+```swift
+import SwiftUI
+import {{ModuleName}}
+
+struct ContentView: View {
+    var body: some View {
+        NavigationView {
+            {{ModuleName}}View()
+        }
+    }
+}
+```
+
+### Coordinator-based Navigation
+
+```swift
+import {{ModuleName}}
+
+class AppCoordinator {
+    private let navigationController: UINavigationController
+
+    init(navigationController: UINavigationController) {
+        self.navigationController = navigationController
+    }
+
+    func start{{ModuleName}}Flow() {
+        let coordinator = {{ModuleName}}Coordinator(navigationController: navigationController)
+        coordinator.start()
+    }
+}
+```
+
+### Using the ViewModel
+
+```swift
+import {{ModuleName}}
+import Combine
+
+class MyViewController: UIViewController {
+    private let viewModel = {{ModuleName}}ViewModel()
+    private var cancellables = Set<AnyCancellable>()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupBindings()
+    }
+
+    private func setupBindings() {
+        viewModel.$isLoading
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isLoading in
+                // Update loading indicator
+                self?.updateLoadingState(isLoading)
+            }
+            .store(in: &cancellables)
+
+        viewModel.$errorMessage
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                // Show error message
+                self?.showError(error)
+            }
+            .store(in: &cancellables)
+    }
+
+    @IBAction func performAction() {
+        viewModel.performAction()
+    }
+}
+```
+
+## MicroApp Testing
+
+This feature includes a companion MicroApp for isolated testing:
+
+### Running the MicroApp
+
+```bash
+# Navigate to the feature directory
+cd {{ModuleName}}/{{ModuleName}}App
+
+# Generate the Xcode project
+xcodegen generate
+
+# Open the project
+open {{ModuleName}}App.xcodeproj
+```
+
+### MicroApp Structure
+
+```
+{{ModuleName}}App/
+├── {{ModuleName}}App/     # App source files
+│   ├── AppDelegate.swift
+│   ├── SceneDelegate.swift
+│   └── DependencyContainer.swift
+├── Assets.xcassets/       # App assets
+└── project.yml           # XcodeGen configuration
+```
+
+## API Reference
+
+### {{ModuleName}}
+
+The main feature interface.
+
+#### Methods
+
+- `createViewController() -> UIViewController`: Creates the main view controller
+- `init()`: Initialize the feature
+
+### {{ModuleName}}View
+
+The main SwiftUI view for the feature.
+
+#### Usage
+
+```swift
+{{ModuleName}}View()
+    .navigationTitle("{{ModuleName|snakeCase|replace:"_":" "|capitalize}}")
+```
+
+### {{ModuleName}}ViewModel
+
+The view model handling business logic and state.
+
+#### Properties
+
+- `@Published var isLoading: Bool`: Loading state indicator
+- `@Published var errorMessage: String?`: Error message for display
+
+#### Methods
+
+- `performAction()`: Execute the main feature action
+
+### {{ModuleName}}Coordinator
+
+Navigation coordinator for the feature flow.
+
+#### Properties
+
+- `navigationController`: The navigation controller for presenting views
+
+#### Methods
+
+- `start()`: Start the feature navigation flow
+
+## Testing
+
+### Unit Tests
+
+Run the tests using:
+
+```bash
+swift test
+```
+
+### View Tests
+
+```swift
+import XCTest
+import SwiftUI
+@testable import {{ModuleName}}
+
+class {{ModuleName}}ViewTests: XCTestCase {
+    func testViewCreation() {
+        let view = {{ModuleName}}View()
+        XCTAssertNotNil(view)
+    }
+}
+```
+
+### ViewModel Tests
+
+```swift
+import XCTest
+import Combine
+@testable import {{ModuleName}}
+
+class {{ModuleName}}ViewModelTests: XCTestCase {
+    var viewModel: {{ModuleName}}ViewModel!
+    var cancellables: Set<AnyCancellable>!
+
+    override func setUp() {
+        super.setUp()
+        viewModel = {{ModuleName}}ViewModel()
+        cancellables = Set<AnyCancellable>()
+    }
+
+    func testInitialState() {
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testPerformAction() {
+        let expectation = XCTestExpectation(description: "Action completed")
+
+        viewModel.$isLoading
+            .dropFirst() // Skip initial value
+            .sink { isLoading in
+                if !isLoading {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        viewModel.performAction()
+
+        wait(for: [expectation], timeout: 5.0)
+    }
+}
+```
+
+## UI Preview Support
+
+SwiftUI previews are included for development:
+
+```swift
+#Preview {
+    {{ModuleName}}View()
+}
+```
+
+### Preview with Mock Data
+
+```swift
+#Preview("Loading State") {
+    let viewModel = {{ModuleName}}ViewModel()
+    viewModel.isLoading = true
+
+    return {{ModuleName}}View()
+        .environmentObject(viewModel)
+}
+
+#Preview("Error State") {
+    let viewModel = {{ModuleName}}ViewModel()
+    viewModel.errorMessage = "Something went wrong"
+
+    return {{ModuleName}}View()
+        .environmentObject(viewModel)
+}
+```
+
+## Integration Guidelines
+
+### With Core Modules
+
+```swift
+import {{ModuleName}}
+import NetworkingCore
+import DataCore
+
+// Inject dependencies into the feature
+let networkService = NetworkService()
+let dataService = DataService()
+
+let feature = {{ModuleName}}(
+    networkService: networkService,
+    dataService: dataService
+)
+```
+
+### With Other Features
+
+```swift
+// Navigate between features
+coordinator.show{{ModuleName}}()
+coordinator.showOtherFeature(with: data)
+```
+
+## Requirements
+
+- iOS {{Platforms|first|replace:".iOS(.v":""|replace:")":"" |default:"16.0"}}+
+- Swift {{SwiftVersion|default:"5.9"}}+
+- Xcode 14.0+
+- SwiftUI
+- Combine
+
+## Contributing
+
+When extending this feature:
+
+1. Follow MVVM architecture patterns
+2. Add SwiftUI previews for new views
+3. Include unit tests for ViewModels
+4. Update the MicroApp with new functionality
+5. Maintain navigation coordinator patterns
+
+## Best Practices
+
+1. **MVVM Separation**: Keep business logic in ViewModels, not in Views
+2. **State Management**: Use `@Published` properties for reactive updates
+3. **Navigation**: Use coordinators for complex navigation flows
+4. **Testing**: Test ViewModels thoroughly, use previews for UI validation
+5. **Accessibility**: Add accessibility labels and hints to views
+6. **Performance**: Use `@StateObject` and `@ObservedObject` appropriately
+
+## Author
+
+{{Author|default:"Catalyst CLI"}}
+{% if OrganizationName %}{{OrganizationName}}{% endif %}
+
+## License
+
+Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.

@@ -1,0 +1,212 @@
+//
+//  {{ModuleName}}Utilities.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+/// Utility functions and helpers for {{ModuleName}}
+public enum {{ModuleName}}Utilities {
+
+    // MARK: - Constants
+
+    public enum Constants {
+        public static let defaultTimeout: TimeInterval = 30.0
+        public static let animationDuration: TimeInterval = 0.3
+        public static let debounceDelay: TimeInterval = 0.5
+        public static let maxRetryAttempts = 3
+    }
+
+    // MARK: - Date Formatting
+
+    /// Format a date using a predefined style
+    public static func formatDate(_ date: Date, style: DateFormatter.Style = .medium) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = style
+        formatter.timeStyle = .none
+        formatter.locale = Locale.current
+        return formatter.string(from: date)
+    }
+
+    /// Format a date with time using predefined styles
+    public static func formatDateTime(_ date: Date, dateStyle: DateFormatter.Style = .medium, timeStyle: DateFormatter.Style = .short) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = dateStyle
+        formatter.timeStyle = timeStyle
+        formatter.locale = Locale.current
+        return formatter.string(from: date)
+    }
+
+    /// Get a relative date string (e.g., "Today", "Yesterday", "2 days ago")
+    public static func relativeDateString(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    // MARK: - Number Formatting
+
+    /// Format a number as currency
+    public static func formatCurrency(_ amount: Double, currencyCode: String = "USD") -> String? {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currencyCode
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: amount))
+    }
+
+    /// Format a number with decimal places
+    public static func formatDecimal(_ number: Double, decimalPlaces: Int = 2) -> String? {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = decimalPlaces
+        formatter.maximumFractionDigits = decimalPlaces
+        return formatter.string(from: NSNumber(value: number))
+    }
+
+    /// Format a percentage
+    public static func formatPercentage(_ value: Double) -> String? {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: value))
+    }
+
+    // MARK: - Validation
+
+    /// Validate an email address
+    public static func isValidEmail(_ email: String) -> Bool {
+        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let predicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
+        return predicate.evaluate(with: email)
+    }
+
+    /// Validate a phone number (basic validation)
+    public static func isValidPhoneNumber(_ phoneNumber: String) -> Bool {
+        let phoneRegex = "^[+]?[0-9]{10,15}$"
+        let predicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
+        let cleaned = phoneNumber.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
+        return predicate.evaluate(with: cleaned)
+    }
+
+    /// Validate a URL
+    public static func isValidURL(_ urlString: String) -> Bool {
+        guard let url = URL(string: urlString),
+              let scheme = url.scheme else {
+            return false
+        }
+        return ["http", "https", "ftp"].contains(scheme.lowercased())
+    }
+
+    // MARK: - Async Utilities
+
+    /// Perform an async operation with timeout
+    public static func performWithTimeout<T>(
+        timeout: TimeInterval = Constants.defaultTimeout,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        return try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                throw UtilityError.timeout
+            }
+
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+    }
+
+    /// Retry an operation with exponential backoff
+    public static func retry<T>(
+        maxAttempts: Int = Constants.maxRetryAttempts,
+        delay: TimeInterval = 1.0,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        var lastError: Error?
+
+        for attempt in 0..<maxAttempts {
+            do {
+                return try await operation()
+            } catch {
+                lastError = error
+                if attempt < maxAttempts - 1 {
+                    let backoffDelay = delay * pow(2.0, Double(attempt))
+                    try await Task.sleep(nanoseconds: UInt64(backoffDelay * 1_000_000_000))
+                }
+            }
+        }
+
+        throw lastError ?? UtilityError.unknown
+    }
+
+    // MARK: - Device & Environment
+
+    /// Check if running in debug mode
+    public static var isDebugMode: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// Check if running in simulator
+    public static var isSimulator: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// Get the current app version
+    public static var appVersion: String? {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+    }
+
+    /// Get the current build number
+    public static var buildNumber: String? {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+    }
+
+    // MARK: - String Utilities
+
+    /// Generate a random UUID string
+    public static func generateUUID() -> String {
+        UUID().uuidString
+    }
+
+    /// Generate a random string of specified length
+    public static func randomString(length: Int) -> String {
+        let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        return String((0..<length).map { _ in letters.randomElement()! })
+    }
+
+    // MARK: - Error Types
+
+    public enum UtilityError: LocalizedError {
+        case timeout
+        case invalidInput
+        case unknown
+
+        public var errorDescription: String? {
+            switch self {
+            case .timeout:
+                return "Operation timed out"
+            case .invalidInput:
+                return "Invalid input provided"
+            case .unknown:
+                return "An unknown error occurred"
+            }
+        }
+    }
+}

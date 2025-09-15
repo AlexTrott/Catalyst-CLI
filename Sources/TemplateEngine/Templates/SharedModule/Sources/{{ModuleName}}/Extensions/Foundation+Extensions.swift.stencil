@@ -1,0 +1,138 @@
+//
+//  Foundation+Extensions.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+// MARK: - String Extensions
+
+public extension String {
+    /// Returns a trimmed version of the string
+    var trimmed: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Check if the string is a valid email
+    var isValidEmail: Bool {
+        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let predicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
+        return predicate.evaluate(with: self)
+    }
+
+    /// Convert string to URL if valid
+    var url: URL? {
+        URL(string: self)
+    }
+
+    /// Check if string contains only whitespace
+    var isBlank: Bool {
+        trimmed.isEmpty
+    }
+}
+
+// MARK: - Date Extensions
+
+public extension Date {
+    /// Check if date is today
+    var isToday: Bool {
+        Calendar.current.isDateInToday(self)
+    }
+
+    /// Check if date is yesterday
+    var isYesterday: Bool {
+        Calendar.current.isDateInYesterday(self)
+    }
+
+    /// Check if date is tomorrow
+    var isTomorrow: Bool {
+        Calendar.current.isDateInTomorrow(self)
+    }
+
+    /// Get the start of the day
+    var startOfDay: Date {
+        Calendar.current.startOfDay(for: self)
+    }
+
+    /// Format date to string using specified format
+    func formatted(as format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        return formatter.string(from: self)
+    }
+}
+
+// MARK: - Collection Extensions
+
+public extension Collection {
+    /// Safe subscript that returns nil instead of crashing
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+
+    /// Check if collection is not empty
+    var isNotEmpty: Bool {
+        !isEmpty
+    }
+}
+
+// MARK: - Optional Extensions
+
+public extension Optional {
+    /// Check if optional is nil
+    var isNil: Bool {
+        self == nil
+    }
+
+    /// Check if optional has value
+    var isNotNil: Bool {
+        self != nil
+    }
+}
+
+// MARK: - Dictionary Extensions
+
+public extension Dictionary {
+    /// Merge two dictionaries, with values from the right dictionary taking precedence
+    func merging(with dict: [Key: Value]) -> [Key: Value] {
+        merging(dict) { _, new in new }
+    }
+}
+
+// MARK: - Array Extensions
+
+public extension Array {
+    /// Get element at index safely
+    func element(at index: Int) -> Element? {
+        guard index >= 0, index < count else { return nil }
+        return self[index]
+    }
+
+    /// Split array into chunks of specified size
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [] }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
+}
+
+// MARK: - URL Extensions
+
+public extension URL {
+    /// Append query parameters to URL
+    func appendingQueryParameters(_ parameters: [String: String]) -> URL? {
+        guard var components = URLComponents(url: self, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+
+        components.queryItems = (components.queryItems ?? []) + parameters.map {
+            URLQueryItem(name: $0.key, value: $0.value)
+        }
+
+        return components.url
+    }
+}

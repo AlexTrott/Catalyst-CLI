@@ -1,0 +1,235 @@
+# {{ModuleName}}
+
+A shared module providing common utilities, extensions, protocols, and models for the application.
+
+## Overview
+
+{{ModuleName}} is a shared Swift package that contains reusable components, utilities, and extensions that can be used across multiple features and modules in the application. This module helps maintain consistency and reduces code duplication.
+
+## Features
+
+### 🔧 Utilities
+- Date and time formatting helpers
+- Number and currency formatting
+- Validation utilities (email, phone, URL)
+- Async operation helpers with timeout and retry
+- Device and environment detection
+
+### 🎯 Extensions
+- **String**: Email validation, trimming, URL conversion
+- **Date**: Today/yesterday/tomorrow checks, formatting
+- **Collection**: Safe subscript access, chunking
+- **Optional**: Nil checking utilities
+- **Dictionary**: Merging operations
+- **Array**: Safe element access, chunking
+- **URL**: Query parameter handling
+
+### 📋 Protocols
+- `Identifiable`: For uniquely identifiable objects
+- `Configurable`: For configurable components
+- `Reusable`: For reusable UI components
+- `Injectable`: For dependency injection
+- `Coordinator`: For navigation coordinators
+- `ViewModel`: For MVVM view models
+- `Service`: For service layers
+- `Cacheable`: For cacheable objects
+- `Validatable`: For validation support
+- `Loadable`: For async loading
+- `Persistable`: For data persistence
+- `Analytics`: For analytics tracking
+- `Logger`: For logging support
+
+### 📦 Models
+- `APIResponse`: Generic API response wrapper
+- `User`: Basic user information model
+- `AppConfiguration`: Application configuration
+- `Pagination`: Pagination support for lists
+- `LoadingState`: Generic loading state management
+
+## Installation
+
+### Swift Package Manager
+
+Add this package to your `Package.swift` dependencies:
+
+```swift
+dependencies: [
+    .package(path: "../{{ModuleName}}")
+]
+```
+
+Then add it to your target dependencies:
+
+```swift
+.target(
+    name: "YourModule",
+    dependencies: ["{{ModuleName}}"]
+)
+```
+
+## Usage
+
+### Import the Module
+
+```swift
+import {{ModuleName}}
+```
+
+### Using Extensions
+
+```swift
+// String extensions
+let email = "user@example.com"
+if email.isValidEmail {
+    print("Valid email")
+}
+
+let trimmed = "  Hello World  ".trimmed  // "Hello World"
+
+// Date extensions
+if Date().isToday {
+    print("Today is today!")
+}
+
+let formatted = Date().formatted(as: "yyyy-MM-dd")
+
+// Collection extensions
+let array = [1, 2, 3]
+let safeElement = array[safe: 10]  // nil, no crash
+
+// Array chunking
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+let chunks = numbers.chunked(into: 3)  // [[1,2,3], [4,5,6], [7,8,9]]
+```
+
+### Using Utilities
+
+```swift
+// Email validation
+if {{ModuleName}}Utilities.isValidEmail("test@example.com") {
+    print("Valid email")
+}
+
+// Date formatting
+let dateString = {{ModuleName}}Utilities.formatDate(Date(), style: .medium)
+
+// Currency formatting
+let price = {{ModuleName}}Utilities.formatCurrency(99.99, currencyCode: "USD")
+
+// Generate UUID
+let uuid = {{ModuleName}}Utilities.generateUUID()
+
+// Async with timeout
+do {
+    let result = try await {{ModuleName}}Utilities.performWithTimeout(timeout: 5.0) {
+        // Your async operation
+        return await fetchData()
+    }
+} catch {
+    print("Operation timed out")
+}
+
+// Retry with exponential backoff
+let data = try await {{ModuleName}}Utilities.retry(maxAttempts: 3) {
+    return try await unreliableNetworkCall()
+}
+```
+
+### Using Protocols
+
+```swift
+// Implement Reusable for table view cells
+class MyCell: UITableViewCell, Reusable {
+    // Automatically gets reuseIdentifier based on class name
+}
+
+// Implement Validatable
+struct LoginForm: Validatable {
+    let email: String
+    let password: String
+
+    var isValid: Bool {
+        validate().isEmpty
+    }
+
+    func validate() -> [ValidationError] {
+        var errors: [ValidationError] = []
+
+        if !email.isValidEmail {
+            errors.append(ValidationError(field: "email", message: "Invalid email"))
+        }
+
+        if password.count < 8 {
+            errors.append(ValidationError(field: "password", message: "Password too short"))
+        }
+
+        return errors
+    }
+}
+```
+
+### Using Models
+
+```swift
+// Loading state management
+@Published var state = LoadingState<[Item]>.idle
+
+func loadItems() async {
+    state = .loading
+    do {
+        let items = try await fetchItems()
+        state = .loaded(items)
+    } catch {
+        state = .error(error)
+    }
+}
+
+// API Response handling
+let response = APIResponse<User>(
+    success: true,
+    data: user,
+    message: "User loaded successfully"
+)
+
+// Pagination
+let paginatedResponse = PaginatedResponse(
+    items: users,
+    pagination: Pagination(page: 1, pageSize: 20, totalPages: 5, totalItems: 100)
+)
+```
+
+## Requirements
+
+- iOS {{Platforms|first|replace:".iOS(.v":""|replace:")":"" |default:"16.0"}}+
+- Swift {{SwiftVersion|default:"5.9"}}+
+- Xcode 14.0+
+
+## Testing
+
+Run the tests using:
+
+```bash
+swift test
+```
+
+Or in Xcode:
+1. Open the package in Xcode
+2. Press ⌘U to run all tests
+
+## Contributing
+
+When adding new utilities or extensions to this module:
+
+1. Ensure the functionality is truly reusable across multiple modules
+2. Add comprehensive unit tests
+3. Update this README with usage examples
+4. Follow existing code style and patterns
+
+## Author
+
+{{Author|default:"Catalyst CLI"}}
+{% if OrganizationName %}{{OrganizationName}}{% endif %}
+
+## License
+
+Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.

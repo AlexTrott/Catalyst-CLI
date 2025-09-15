@@ -1,0 +1,255 @@
+# {{ModuleName}}
+
+A core module providing business logic, services, and models for {{ModuleName|snakeCase|replace:"_":" "|capitalize}} functionality.
+
+## Overview
+
+{{ModuleName}} is a core Swift package that encapsulates the business logic, data models, and service layers for the {{ModuleName|snakeCase|replace:"_":" "|lowercase}} domain. This module follows clean architecture principles to ensure separation of concerns and maintainability.
+
+## Architecture
+
+This module follows a layered architecture:
+
+```
+{{ModuleName}}/
+├── Models/         # Data models and entities
+├── Services/       # Business logic and API services
+├── Extensions/     # Module-specific extensions
+└── {{ModuleName}}.swift  # Main module interface
+```
+
+## Features
+
+- **Service Layer**: Encapsulated business logic in `{{ModuleName}}Service`
+- **Data Models**: Type-safe models in `{{ModuleName}}Model`
+- **Configuration**: Flexible configuration through `{{ModuleName}}Configuration`
+- **Async/Await Support**: Modern Swift concurrency patterns
+- **Error Handling**: Comprehensive error types and handling
+
+## Installation
+
+### Swift Package Manager
+
+Add this package to your `Package.swift` dependencies:
+
+```swift
+dependencies: [
+    .package(path: "../{{ModuleName}}")
+]
+```
+
+Then add it to your target dependencies:
+
+```swift
+.target(
+    name: "YourModule",
+    dependencies: ["{{ModuleName}}"]
+)
+```
+
+## Usage
+
+### Basic Setup
+
+```swift
+import {{ModuleName}}
+
+// Using the shared instance
+let module = {{ModuleName}}.shared
+
+// Or create with custom service
+let customService = {{ModuleName}}Service()
+let module = {{ModuleName}}(service: customService)
+```
+
+### Configuration
+
+```swift
+// Configure the module
+let config = {{ModuleName}}Configuration(
+    environment: .production,
+    options: ["apiKey": "your-api-key"]
+)
+module.configure(with: config)
+```
+
+### Performing Operations
+
+```swift
+// Async operation example
+Task {
+    do {
+        let result = try await module.performCoreOperation()
+        if result.isSuccess {
+            print("Success: \\(result.message)")
+            // Process result.data
+        }
+    } catch {
+        print("Error: \\(error)")
+    }
+}
+```
+
+### Using the Service
+
+```swift
+let service = {{ModuleName}}Service()
+
+// Configure the service
+service.configure(with: config)
+
+// Perform service operations
+Task {
+    do {
+        let result = try await service.performOperation()
+        // Handle result
+    } catch {
+        // Handle error
+    }
+}
+```
+
+### Working with Models
+
+```swift
+// Create a model instance
+let model = {{ModuleName}}Model(
+    id: UUID(),
+    name: "Example",
+    createdAt: Date()
+)
+
+// Use the model
+print("Model: \\(model.name)")
+```
+
+## API Reference
+
+### {{ModuleName}}
+
+The main interface for the module.
+
+#### Properties
+
+- `shared`: Shared instance for convenient access
+- `service`: The underlying service instance
+
+#### Methods
+
+- `performCoreOperation() async throws -> {{ModuleName}}Result`: Main operation method
+- `configure(with:)`: Configure the module with options
+
+### {{ModuleName}}Service
+
+The service layer handling business logic.
+
+#### Methods
+
+- `performOperation() async throws -> {{ModuleName}}Result`: Execute service operation
+- `configure(with:)`: Configure the service
+
+### {{ModuleName}}Configuration
+
+Configuration options for the module.
+
+#### Properties
+
+- `environment`: The environment (.development, .staging, .production)
+- `options`: Additional configuration options
+
+### {{ModuleName}}Result
+
+Result type for operations.
+
+#### Properties
+
+- `isSuccess`: Whether the operation succeeded
+- `message`: Result message
+- `data`: Optional result data
+
+## Testing
+
+### Unit Tests
+
+Run the tests using:
+
+```bash
+swift test
+```
+
+Or in Xcode:
+1. Open the package in Xcode
+2. Press ⌘U to run all tests
+
+### Integration Tests
+
+```swift
+import XCTest
+@testable import {{ModuleName}}
+
+class {{ModuleName}}IntegrationTests: XCTestCase {
+    func testEndToEndOperation() async throws {
+        let module = {{ModuleName}}.shared
+        let config = {{ModuleName}}Configuration(environment: .development)
+        module.configure(with: config)
+
+        let result = try await module.performCoreOperation()
+        XCTAssertTrue(result.isSuccess)
+    }
+}
+```
+
+## Error Handling
+
+The module defines specific error types for better error handling:
+
+```swift
+do {
+    let result = try await module.performCoreOperation()
+    // Handle success
+} catch let error as {{ModuleName}}Error {
+    switch error {
+    case .configurationMissing:
+        print("Module not configured")
+    case .operationFailed(let reason):
+        print("Operation failed: \\(reason)")
+    default:
+        print("Unknown error: \\(error)")
+    }
+} catch {
+    print("Unexpected error: \\(error)")
+}
+```
+
+## Requirements
+
+- iOS {{Platforms|first|replace:".iOS(.v":""|replace:")":"" |default:"16.0"}}+
+- Swift {{SwiftVersion|default:"5.9"}}+
+- Xcode 14.0+
+
+## Contributing
+
+When extending this module:
+
+1. Add new functionality to appropriate layers (Models, Services, etc.)
+2. Maintain backward compatibility
+3. Add comprehensive unit tests
+4. Update this README with new features
+5. Follow existing code patterns and conventions
+
+## Best Practices
+
+1. **Separation of Concerns**: Keep business logic in services, data structures in models
+2. **Dependency Injection**: Use initializer injection for testability
+3. **Error Handling**: Use typed errors for clear error communication
+4. **Documentation**: Document public APIs with clear examples
+5. **Testing**: Maintain high test coverage for business logic
+
+## Author
+
+{{Author|default:"Catalyst CLI"}}
+{% if OrganizationName %}{{OrganizationName}}{% endif %}
+
+## License
+
+Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.

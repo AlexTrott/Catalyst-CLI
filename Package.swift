@@ -80,6 +80,9 @@ let package = Package(
                 .product(name: "Stencil", package: "Stencil"),
                 .product(name: "PathKit", package: "PathKit"),
                 .product(name: "Files", package: "Files")
+            ],
+            resources: [
+                .copy("Templates")
             ]
         ),
 

@@ -1,0 +1,311 @@
+# {{ModuleName}}App
+
+A standalone iOS MicroApp for testing {{ModuleName}} in isolation.
+
+## Overview
+
+{{ModuleName}}App is a complete iOS application designed to test and demonstrate the {{ModuleName}} feature module in isolation. This MicroApp provides a minimal environment to develop, test, and validate feature functionality without the complexity of a full application.
+
+## Architecture
+
+```
+{{ModuleName}}App/
+├── {{ModuleName}}App/        # App source files
+│   ├── AppDelegate.swift     # App lifecycle management
+│   ├── SceneDelegate.swift   # Scene lifecycle management
+│   └── DependencyContainer.swift # Dependency injection setup
+├── Assets.xcassets/          # App assets and icons
+├── Info.plist               # App configuration
+├── project.yml              # XcodeGen project configuration
+└── README.md               # This file
+```
+
+## Features
+
+- **Isolated Testing Environment**: Test {{ModuleName}} without external dependencies
+- **XcodeGen Integration**: Programmatic project generation
+- **Dependency Injection**: Clean dependency setup through DependencyContainer
+- **Hot Reload Support**: Quick iteration during development
+- **Complete iOS App**: Ready to run on device or simulator
+
+## Getting Started
+
+### Prerequisites
+
+- Xcode 14.0+
+- XcodeGen (install via `brew install xcodegen`)
+- {{ModuleName}} feature module (should be in parent directory)
+
+### Installation
+
+1. **Navigate to the MicroApp directory:**
+   ```bash
+   cd {{ModuleName}}App
+   ```
+
+2. **Generate the Xcode project:**
+   ```bash
+   xcodegen generate
+   ```
+
+3. **Open the project:**
+   ```bash
+   open {{ModuleName}}App.xcodeproj
+   ```
+
+4. **Build and run:**
+   - Select a simulator or device
+   - Press ⌘R to build and run
+
+## Project Configuration
+
+### XcodeGen Setup
+
+The project is configured using `project.yml`:
+
+```yaml
+name: {{ModuleName}}App
+bundleIdPrefix: {% if BundleIdentifier %}{{BundleIdentifier}}{% else %}com.catalyst.{{ModuleName|lowercase}}app{% endif %}
+
+packages:
+  {{ModuleName}}:
+    path: ../{{ModuleName}}
+
+targets:
+  {{ModuleName}}App:
+    type: application
+    platform: iOS
+    sources: [{{ModuleName}}App]
+    dependencies:
+      - package: {{ModuleName}}
+```
+
+### Dependencies
+
+The MicroApp depends on:
+- `{{ModuleName}}`: The feature module being tested
+- Standard iOS frameworks (UIKit, SwiftUI, Foundation)
+
+## Usage
+
+### Running the App
+
+1. **Simulator:** Select any iOS simulator and run
+2. **Device:** Connect an iOS device and run (may require developer account setup)
+
+### Development Workflow
+
+1. **Make changes** to the {{ModuleName}} feature module
+2. **Build and run** the MicroApp to see changes immediately
+3. **Test interactions** in the isolated environment
+4. **Debug issues** without external complexity
+
+### Dependency Injection
+
+The `DependencyContainer` sets up required dependencies:
+
+```swift
+class DependencyContainer {
+    // Configure feature dependencies
+    static func configure{{ModuleName}}() -> {{ModuleName}} {
+        // Set up any required services or dependencies
+        return {{ModuleName}}()
+    }
+}
+```
+
+Modify this class to inject mock services or test data as needed.
+
+## Testing
+
+### Manual Testing
+
+1. **Feature Functionality**: Test all feature capabilities
+2. **Navigation**: Verify navigation flows work correctly
+3. **Error Handling**: Test error scenarios and edge cases
+4. **Performance**: Monitor performance in isolation
+
+### Automated Testing
+
+Add UI tests specific to the MicroApp:
+
+```swift
+import XCTest
+
+class {{ModuleName}}AppUITests: XCTestCase {
+    var app: XCUIApplication!
+
+    override func setUp() {
+        super.setUp()
+        app = XCUIApplication()
+        app.launch()
+    }
+
+    func testFeatureNavigation() {
+        // Test your feature's UI interactions
+        XCTAssertTrue(app.staticTexts["{{ModuleName}}"].exists)
+    }
+}
+```
+
+## Customization
+
+### Adding Mock Data
+
+Extend the `DependencyContainer` to provide mock data:
+
+```swift
+extension DependencyContainer {
+    static func createMockData() -> [MockModel] {
+        // Return test data for development
+        return []
+    }
+
+    static func configureWithMockData() -> {{ModuleName}} {
+        let mockData = createMockData()
+        // Configure feature with mock data
+        return {{ModuleName}}(mockData: mockData)
+    }
+}
+```
+
+### Custom Launch Configuration
+
+Modify `SceneDelegate` to customize the launch experience:
+
+```swift
+func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    guard let windowScene = (scene as? UIWindowScene) else { return }
+
+    let window = UIWindow(windowScene: windowScene)
+
+    // Customize the root view controller
+    let feature = DependencyContainer.configure{{ModuleName}}()
+    let rootViewController = feature.createViewController()
+
+    window.rootViewController = UINavigationController(rootViewController: rootViewController)
+    window.makeKeyAndVisible()
+
+    self.window = window
+}
+```
+
+## Debugging
+
+### Common Issues
+
+1. **Module Not Found**: Ensure {{ModuleName}} exists in the parent directory
+2. **Build Errors**: Run `xcodegen generate` to refresh project configuration
+3. **Missing Dependencies**: Check `project.yml` package references
+
+### Debug Tools
+
+1. **Console Logs**: Use `print()` statements for debugging
+2. **Breakpoints**: Set breakpoints in {{ModuleName}} code
+3. **View Hierarchy**: Use Xcode's view debugger
+4. **Instruments**: Profile performance with Instruments
+
+## Deployment
+
+### TestFlight Distribution
+
+1. **Archive the app** (Product → Archive)
+2. **Upload to App Store Connect**
+3. **Distribute via TestFlight** for broader testing
+
+### Ad Hoc Distribution
+
+1. **Create an Ad Hoc provisioning profile**
+2. **Archive with the Ad Hoc profile**
+3. **Export and distribute** the IPA file
+
+## Configuration
+
+### Environment Variables
+
+Add environment-specific configuration:
+
+```swift
+// In DependencyContainer
+enum Environment {
+    case development
+    case staging
+    case production
+
+    static var current: Environment {
+        #if DEBUG
+        return .development
+        #else
+        return .production
+        #endif
+    }
+}
+```
+
+### Feature Flags
+
+Control feature behavior during testing:
+
+```swift
+struct FeatureFlags {
+    static let enableExperimentalFeature = true
+    static let useMockData = Environment.current == .development
+}
+```
+
+## Best Practices
+
+1. **Keep It Simple**: MicroApps should be minimal and focused
+2. **Mock External Dependencies**: Avoid real network calls when possible
+3. **Test Edge Cases**: Use the isolation to test unusual scenarios
+4. **Document Changes**: Update this README when adding functionality
+5. **Version Control**: Include the MicroApp in your feature's repository
+
+## Requirements
+
+- iOS {{Platforms|first|replace:".iOS(.v":""|replace:")":"" |default:"16.0"}}+
+- Xcode 14.0+
+- XcodeGen
+- {{ModuleName}} feature module
+
+## Contributing
+
+When modifying this MicroApp:
+
+1. Update `project.yml` for project configuration changes
+2. Regenerate the project with `xcodegen generate`
+3. Test on both simulator and device
+4. Update this README with any new setup steps
+
+## Troubleshooting
+
+### XcodeGen Issues
+
+```bash
+# Reinstall XcodeGen
+brew uninstall xcodegen
+brew install xcodegen
+
+# Clean and regenerate
+rm -rf {{ModuleName}}App.xcodeproj
+xcodegen generate
+```
+
+### Build Issues
+
+```bash
+# Clean derived data
+rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# Clean build folder in Xcode
+Product → Clean Build Folder
+```
+
+## Author
+
+{{Author|default:"Catalyst CLI"}}
+{% if OrganizationName %}{{OrganizationName}}{% endif %}
+
+## License
+
+Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.

@@ -1,0 +1,304 @@
+//
+//  {{ModuleName}}Tests.swift
+//  {{ModuleName}}Tests
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import XCTest
+@testable import {{ModuleName}}
+
+final class {{ModuleName}}Tests: XCTestCase {
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        // Put setup code here. This method is called before the invocation of each test method in the class.
+    }
+
+    override func tearDownWithError() throws {
+        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        try super.tearDownWithError()
+    }
+
+    // MARK: - Module Tests
+
+    func testModuleVersion() throws {
+        XCTAssertEqual({{ModuleName}}.version, "1.0.0")
+    }
+
+    func testModuleIdentifier() throws {
+        XCTAssertTrue({{ModuleName}}.identifier.contains("{{ModuleName|lowercase}}"))
+    }
+
+    func testModuleConfiguration() throws {
+        XCTAssertTrue({{ModuleName}}.isConfigured)
+    }
+
+    // MARK: - String Extension Tests
+
+    func testStringTrimmed() throws {
+        let testString = "  Hello World  \n"
+        XCTAssertEqual(testString.trimmed, "Hello World")
+    }
+
+    func testStringIsValidEmail() throws {
+        XCTAssertTrue("test@example.com".isValidEmail)
+        XCTAssertTrue("user.name+tag@example.co.uk".isValidEmail)
+        XCTAssertFalse("invalid.email".isValidEmail)
+        XCTAssertFalse("@example.com".isValidEmail)
+        XCTAssertFalse("test@".isValidEmail)
+    }
+
+    func testStringIsBlank() throws {
+        XCTAssertTrue("   ".isBlank)
+        XCTAssertTrue("".isBlank)
+        XCTAssertTrue("\n\t".isBlank)
+        XCTAssertFalse("Hello".isBlank)
+        XCTAssertFalse("  Hello  ".isBlank)
+    }
+
+    func testStringURL() throws {
+        XCTAssertNotNil("https://www.example.com".url)
+        XCTAssertNotNil("http://localhost:8080/path".url)
+        XCTAssertNil("not a url".url)
+        XCTAssertNil("".url)
+    }
+
+    // MARK: - Date Extension Tests
+
+    func testDateIsToday() throws {
+        let today = Date()
+        XCTAssertTrue(today.isToday)
+
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        XCTAssertFalse(yesterday.isToday)
+
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        XCTAssertFalse(tomorrow.isToday)
+    }
+
+    func testDateIsYesterday() throws {
+        let today = Date()
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        XCTAssertTrue(yesterday.isYesterday)
+        XCTAssertFalse(today.isYesterday)
+    }
+
+    func testDateIsTomorrow() throws {
+        let today = Date()
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        XCTAssertTrue(tomorrow.isTomorrow)
+        XCTAssertFalse(today.isTomorrow)
+    }
+
+    func testDateStartOfDay() throws {
+        let date = Date()
+        let startOfDay = date.startOfDay
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute, .second], from: startOfDay)
+
+        XCTAssertEqual(components.hour, 0)
+        XCTAssertEqual(components.minute, 0)
+        XCTAssertEqual(components.second, 0)
+    }
+
+    // MARK: - Collection Extension Tests
+
+    func testCollectionSafeSubscript() throws {
+        let array = [1, 2, 3, 4, 5]
+        XCTAssertEqual(array[safe: 0], 1)
+        XCTAssertEqual(array[safe: 4], 5)
+        XCTAssertNil(array[safe: 5])
+        XCTAssertNil(array[safe: -1])
+        XCTAssertNil(array[safe: 100])
+    }
+
+    func testCollectionIsNotEmpty() throws {
+        let emptyArray: [Int] = []
+        let nonEmptyArray = [1, 2, 3]
+
+        XCTAssertFalse(emptyArray.isNotEmpty)
+        XCTAssertTrue(nonEmptyArray.isNotEmpty)
+    }
+
+    // MARK: - Array Extension Tests
+
+    func testArrayElementAt() throws {
+        let array = ["a", "b", "c"]
+        XCTAssertEqual(array.element(at: 0), "a")
+        XCTAssertEqual(array.element(at: 2), "c")
+        XCTAssertNil(array.element(at: 3))
+        XCTAssertNil(array.element(at: -1))
+    }
+
+    func testArrayChunked() throws {
+        let array = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        let chunks = array.chunked(into: 3)
+
+        XCTAssertEqual(chunks.count, 3)
+        XCTAssertEqual(chunks[0], [1, 2, 3])
+        XCTAssertEqual(chunks[1], [4, 5, 6])
+        XCTAssertEqual(chunks[2], [7, 8, 9])
+
+        let unevenChunks = array.chunked(into: 4)
+        XCTAssertEqual(unevenChunks.count, 3)
+        XCTAssertEqual(unevenChunks[2], [9])
+
+        let emptyChunks = array.chunked(into: 0)
+        XCTAssertEqual(emptyChunks.count, 0)
+    }
+
+    // MARK: - Optional Extension Tests
+
+    func testOptionalIsNil() throws {
+        let nilValue: String? = nil
+        let nonNilValue: String? = "Hello"
+
+        XCTAssertTrue(nilValue.isNil)
+        XCTAssertFalse(nonNilValue.isNil)
+    }
+
+    func testOptionalIsNotNil() throws {
+        let nilValue: String? = nil
+        let nonNilValue: String? = "Hello"
+
+        XCTAssertFalse(nilValue.isNotNil)
+        XCTAssertTrue(nonNilValue.isNotNil)
+    }
+
+    // MARK: - Dictionary Extension Tests
+
+    func testDictionaryMerging() throws {
+        let dict1 = ["a": 1, "b": 2]
+        let dict2 = ["b": 3, "c": 4]
+        let merged = dict1.merging(with: dict2)
+
+        XCTAssertEqual(merged["a"], 1)
+        XCTAssertEqual(merged["b"], 3) // Value from dict2 takes precedence
+        XCTAssertEqual(merged["c"], 4)
+    }
+
+    // MARK: - Utility Tests
+
+    func testEmailValidation() throws {
+        XCTAssertTrue({{ModuleName}}Utilities.isValidEmail("test@example.com"))
+        XCTAssertTrue({{ModuleName}}Utilities.isValidEmail("user.name@example.co.uk"))
+        XCTAssertFalse({{ModuleName}}Utilities.isValidEmail("invalid"))
+        XCTAssertFalse({{ModuleName}}Utilities.isValidEmail("@example.com"))
+    }
+
+    func testPhoneNumberValidation() throws {
+        XCTAssertTrue({{ModuleName}}Utilities.isValidPhoneNumber("+1234567890"))
+        XCTAssertTrue({{ModuleName}}Utilities.isValidPhoneNumber("1234567890"))
+        XCTAssertFalse({{ModuleName}}Utilities.isValidPhoneNumber("123"))
+        XCTAssertFalse({{ModuleName}}Utilities.isValidPhoneNumber("abc"))
+    }
+
+    func testURLValidation() throws {
+        XCTAssertTrue({{ModuleName}}Utilities.isValidURL("https://www.example.com"))
+        XCTAssertTrue({{ModuleName}}Utilities.isValidURL("http://localhost:8080"))
+        XCTAssertTrue({{ModuleName}}Utilities.isValidURL("ftp://ftp.example.com"))
+        XCTAssertFalse({{ModuleName}}Utilities.isValidURL("not a url"))
+        XCTAssertFalse({{ModuleName}}Utilities.isValidURL("example.com"))
+    }
+
+    func testUUIDGeneration() throws {
+        let uuid1 = {{ModuleName}}Utilities.generateUUID()
+        let uuid2 = {{ModuleName}}Utilities.generateUUID()
+
+        XCTAssertNotEqual(uuid1, uuid2)
+        XCTAssertEqual(uuid1.count, 36) // UUID format: 8-4-4-4-12
+    }
+
+    func testRandomStringGeneration() throws {
+        let randomString = {{ModuleName}}Utilities.randomString(length: 10)
+        XCTAssertEqual(randomString.count, 10)
+
+        let anotherRandom = {{ModuleName}}Utilities.randomString(length: 10)
+        XCTAssertNotEqual(randomString, anotherRandom)
+    }
+
+    // MARK: - Model Tests
+
+    func testUserModel() throws {
+        let user = User(
+            id: "123",
+            username: "testuser",
+            email: "test@example.com",
+            firstName: "John",
+            lastName: "Doe"
+        )
+
+        XCTAssertEqual(user.id, "123")
+        XCTAssertEqual(user.username, "testuser")
+        XCTAssertEqual(user.fullName, "John Doe")
+    }
+
+    func testPaginationModel() throws {
+        let pagination = Pagination(
+            page: 2,
+            pageSize: 10,
+            totalPages: 5,
+            totalItems: 50
+        )
+
+        XCTAssertTrue(pagination.hasNext)
+        XCTAssertTrue(pagination.hasPrevious)
+
+        let firstPage = Pagination(page: 1, pageSize: 10, totalPages: 5, totalItems: 50)
+        XCTAssertTrue(firstPage.hasNext)
+        XCTAssertFalse(firstPage.hasPrevious)
+
+        let lastPage = Pagination(page: 5, pageSize: 10, totalPages: 5, totalItems: 50)
+        XCTAssertFalse(lastPage.hasNext)
+        XCTAssertTrue(lastPage.hasPrevious)
+    }
+
+    func testLoadingState() throws {
+        let idleState = LoadingState<String>.idle
+        XCTAssertFalse(idleState.isLoading)
+        XCTAssertNil(idleState.value)
+        XCTAssertNil(idleState.error)
+
+        let loadingState = LoadingState<String>.loading
+        XCTAssertTrue(loadingState.isLoading)
+
+        let loadedState = LoadingState<String>.loaded("Success")
+        XCTAssertFalse(loadedState.isLoading)
+        XCTAssertEqual(loadedState.value, "Success")
+
+        let errorState = LoadingState<String>.error(NSError(domain: "Test", code: 1, userInfo: nil))
+        XCTAssertFalse(errorState.isLoading)
+        XCTAssertNotNil(errorState.error)
+    }
+
+    // MARK: - Performance Tests
+
+    func testPerformanceStringTrimming() throws {
+        let testString = "  Hello World with lots of spaces     \n\n\n"
+
+        measure {
+            for _ in 0..<1000 {
+                _ = testString.trimmed
+            }
+        }
+    }
+
+    func testPerformanceEmailValidation() throws {
+        let emails = [
+            "test@example.com",
+            "invalid.email",
+            "user.name+tag@example.co.uk",
+            "@example.com"
+        ]
+
+        measure {
+            for _ in 0..<1000 {
+                for email in emails {
+                    _ = {{ModuleName}}Utilities.isValidEmail(email)
+                }
+            }
+        }
+    }
+}

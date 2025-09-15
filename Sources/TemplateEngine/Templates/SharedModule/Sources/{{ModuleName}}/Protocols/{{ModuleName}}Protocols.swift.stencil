@@ -1,0 +1,162 @@
+//
+//  {{ModuleName}}Protocols.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+// MARK: - Identifiable Protocol
+
+/// Protocol for objects that can be uniquely identified
+public protocol Identifiable {
+    associatedtype ID: Hashable
+    var id: ID { get }
+}
+
+// MARK: - Configurable Protocol
+
+/// Protocol for objects that can be configured
+public protocol Configurable {
+    associatedtype Configuration
+    func configure(with configuration: Configuration)
+}
+
+// MARK: - Reusable Protocol
+
+/// Protocol for reusable views and cells
+public protocol Reusable {
+    static var reuseIdentifier: String { get }
+}
+
+public extension Reusable {
+    static var reuseIdentifier: String {
+        String(describing: self)
+    }
+}
+
+// MARK: - Injectable Protocol
+
+/// Protocol for dependency injection
+public protocol Injectable {
+    associatedtype Dependencies
+    init(dependencies: Dependencies)
+}
+
+// MARK: - Coordinator Protocol
+
+/// Base protocol for coordinators
+public protocol Coordinator: AnyObject {
+    func start()
+    func finish()
+}
+
+// MARK: - ViewModel Protocol
+
+/// Base protocol for view models
+public protocol ViewModel: ObservableObject {
+    associatedtype Input
+    associatedtype Output
+
+    func transform(input: Input) -> Output
+}
+
+// MARK: - Service Protocol
+
+/// Base protocol for services
+public protocol Service {
+    var isAvailable: Bool { get }
+    func setup() async throws
+    func teardown() async throws
+}
+
+// MARK: - Cacheable Protocol
+
+/// Protocol for objects that can be cached
+public protocol Cacheable {
+    var cacheKey: String { get }
+    var cacheExpiration: TimeInterval { get }
+}
+
+// MARK: - Validatable Protocol
+
+/// Protocol for objects that can be validated
+public protocol Validatable {
+    var isValid: Bool { get }
+    func validate() -> [ValidationError]
+}
+
+public struct ValidationError: Error, LocalizedError {
+    public let field: String
+    public let message: String
+
+    public init(field: String, message: String) {
+        self.field = field
+        self.message = message
+    }
+
+    public var errorDescription: String? {
+        "\(field): \(message)"
+    }
+}
+
+// MARK: - Loadable Protocol
+
+/// Protocol for objects that can be loaded asynchronously
+public protocol Loadable {
+    associatedtype LoadedType
+    func load() async throws -> LoadedType
+}
+
+// MARK: - Persistable Protocol
+
+/// Protocol for objects that can be persisted
+public protocol Persistable {
+    func save() async throws
+    func delete() async throws
+    static func load(id: String) async throws -> Self
+}
+
+// MARK: - Cancellable Protocol
+
+/// Protocol for cancellable operations
+public protocol Cancellable {
+    func cancel()
+    var isCancelled: Bool { get }
+}
+
+// MARK: - ErrorHandler Protocol
+
+/// Protocol for handling errors
+public protocol ErrorHandler {
+    func handle(error: Error)
+    func canHandle(error: Error) -> Bool
+}
+
+// MARK: - Logger Protocol
+
+/// Protocol for logging
+public protocol Logger {
+    func log(_ message: String, level: LogLevel)
+    func log(error: Error, level: LogLevel)
+}
+
+public enum LogLevel: String {
+    case verbose
+    case debug
+    case info
+    case warning
+    case error
+    case critical
+}
+
+// MARK: - Analytics Protocol
+
+/// Protocol for analytics tracking
+public protocol Analytics {
+    func track(event: String, parameters: [String: Any]?)
+    func setUserProperty(key: String, value: Any)
+    func setUserId(_ userId: String?)
+}

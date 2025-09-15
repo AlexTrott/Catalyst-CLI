@@ -1,0 +1,359 @@
+//
+//  {{ModuleName}}ViewTests.swift
+//  {{ModuleName}}Tests
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import XCTest
+import SwiftUI
+import ViewInspector
+@testable import {{ModuleName}}
+
+@MainActor
+final class {{ModuleName}}ViewTests: XCTestCase {
+
+    // MARK: - View Creation Tests
+
+    func testViewCreation() throws {
+        let view = {{ModuleName}}View()
+        XCTAssertNotNil(view)
+    }
+
+    func testViewInspection() throws {
+        let view = {{ModuleName}}View()
+
+        // Basic view inspection
+        let inspectedView = try view.inspect()
+        XCTAssertNotNil(inspectedView)
+    }
+
+    // MARK: - View Structure Tests
+
+    func testViewHasTitle() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Test that the view contains a title
+        // This assumes your view has a Text element with "{{ModuleName}} View"
+        XCTAssertNoThrow(try inspectedView.find(text: "{{ModuleName}} View"))
+    }
+
+    func testViewHasButton() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Test that the view contains a button
+        // This assumes your view has a Button with "Perform Action"
+        XCTAssertNoThrow(try inspectedView.find(button: "Perform Action"))
+    }
+
+    func testViewStructure() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Test the basic structure - should be a VStack
+        let vstack = try inspectedView.vStack()
+        XCTAssertNotNil(vstack)
+
+        // Check that VStack has children
+        XCTAssertGreaterThan(try vstack.count(), 0)
+    }
+
+    // MARK: - State-Driven View Tests
+
+    func testLoadingState() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        // Set loading state
+        viewModel.isLoading = true
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Should show ProgressView when loading
+        XCTAssertNoThrow(try inspectedView.find(ViewType.ProgressView.self))
+    }
+
+    func testNormalState() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        // Ensure not loading
+        viewModel.isLoading = false
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Should show button when not loading
+        XCTAssertNoThrow(try inspectedView.find(button: "Perform Action"))
+    }
+
+    func testErrorState() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        // Set error state
+        viewModel.errorMessage = "Test error"
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Should display error message
+        XCTAssertNoThrow(try inspectedView.find(text: "Test error"))
+    }
+
+    // MARK: - Interaction Tests
+
+    func testButtonAction() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Find and tap the button
+        let button = try inspectedView.find(button: "Perform Action")
+        try button.tap()
+
+        // Verify that the action was triggered (ViewModel should be loading)
+        XCTAssertTrue(viewModel.isLoading)
+    }
+
+    func testNavigationTitle() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Test navigation title
+        let navigationTitle = try inspectedView.navigationTitle()
+        XCTAssertEqual(try navigationTitle.string(), "{{ModuleName}}")
+    }
+
+    // MARK: - Layout Tests
+
+    func testVStackLayout() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        let vstack = try inspectedView.vStack()
+
+        // Test that VStack has expected elements
+        XCTAssertGreaterThanOrEqual(try vstack.count(), 2) // Title and button at minimum
+    }
+
+    func testPaddingAndSpacing() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Test padding on title
+        let titleText = try inspectedView.find(text: "{{ModuleName}} View")
+        XCTAssertNoThrow(try titleText.padding())
+    }
+
+    // MARK: - Accessibility Tests
+
+    func testAccessibilityLabels() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Test that button has accessibility label
+        let button = try inspectedView.find(button: "Perform Action")
+
+        // Button should be accessible by default
+        XCTAssertNotNil(button)
+    }
+
+    func testAccessibilityTraits() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        // Find button and verify accessibility
+        let button = try inspectedView.find(button: "Perform Action")
+        XCTAssertNotNil(button)
+
+        // Additional accessibility tests can be added here
+    }
+
+    // MARK: - Font and Style Tests
+
+    func testTitleFont() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        let titleText = try inspectedView.find(text: "{{ModuleName}} View")
+        let font = try titleText.attributes().font()
+
+        XCTAssertEqual(font, .title)
+    }
+
+    func testButtonStyling() throws {
+        let view = {{ModuleName}}View()
+        let inspectedView = try view.inspect()
+
+        let button = try inspectedView.find(button: "Perform Action")
+
+        // Test that button has padding
+        XCTAssertNoThrow(try button.padding())
+    }
+
+    // MARK: - ViewModel Integration Tests
+
+    func testViewModelBinding() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        let viewWithModel = view.environmentObject(viewModel)
+
+        // Test that view responds to ViewModel changes
+        viewModel.isLoading = true
+
+        let inspectedView = try viewWithModel.inspect()
+        XCTAssertNoThrow(try inspectedView.find(ViewType.ProgressView.self))
+
+        viewModel.isLoading = false
+        XCTAssertNoThrow(try inspectedView.find(button: "Perform Action"))
+    }
+
+    func testViewModelStateChanges() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Initial state
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+
+        // Trigger action
+        let button = try inspectedView.find(button: "Perform Action")
+        try button.tap()
+
+        // Should be loading now
+        XCTAssertTrue(viewModel.isLoading)
+    }
+
+    // MARK: - Preview Tests
+
+    func testPreviewCreation() throws {
+        // Test that preview can be created without errors
+        let preview = {{ModuleName}}View()
+        XCTAssertNotNil(preview)
+
+        // Test preview inspection
+        let inspectedPreview = try preview.inspect()
+        XCTAssertNotNil(inspectedPreview)
+    }
+
+    // MARK: - Dark Mode Tests
+
+    func testDarkModeAppearance() throws {
+        let view = {{ModuleName}}View()
+            .preferredColorScheme(.dark)
+
+        let inspectedView = try view.inspect()
+        XCTAssertNotNil(inspectedView)
+
+        // View should render without issues in dark mode
+        XCTAssertNoThrow(try inspectedView.find(text: "{{ModuleName}} View"))
+    }
+
+    func testLightModeAppearance() throws {
+        let view = {{ModuleName}}View()
+            .preferredColorScheme(.light)
+
+        let inspectedView = try view.inspect()
+        XCTAssertNotNil(inspectedView)
+
+        // View should render without issues in light mode
+        XCTAssertNoThrow(try inspectedView.find(text: "{{ModuleName}} View"))
+    }
+
+    // MARK: - Dynamic Type Tests
+
+    func testDynamicTypeSupport() throws {
+        let view = {{ModuleName}}View()
+            .environment(\.sizeCategory, .extraLarge)
+
+        let inspectedView = try view.inspect()
+        XCTAssertNotNil(inspectedView)
+
+        // View should support dynamic type scaling
+        XCTAssertNoThrow(try inspectedView.find(text: "{{ModuleName}} View"))
+    }
+
+    // MARK: - Error Handling Tests
+
+    func testViewWithError() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        viewModel.errorMessage = "Network error occurred"
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Should display the error message
+        XCTAssertNoThrow(try inspectedView.find(text: "Network error occurred"))
+    }
+
+    func testViewErrorClearing() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        // Set error first
+        viewModel.errorMessage = "Error message"
+
+        let viewWithModel = view.environmentObject(viewModel)
+        let inspectedView = try viewWithModel.inspect()
+
+        // Verify error is shown
+        XCTAssertNoThrow(try inspectedView.find(text: "Error message"))
+
+        // Clear error
+        viewModel.errorMessage = nil
+
+        // Error should no longer be visible
+        XCTAssertThrowsError(try inspectedView.find(text: "Error message"))
+    }
+
+    // MARK: - Performance Tests
+
+    func testViewRenderingPerformance() throws {
+        measure {
+            for _ in 0..<100 {
+                let view = {{ModuleName}}View()
+                _ = try? view.inspect()
+            }
+        }
+    }
+
+    func testViewStateChangePerformance() throws {
+        let view = {{ModuleName}}View()
+        let viewModel = {{ModuleName}}ViewModel()
+
+        let viewWithModel = view.environmentObject(viewModel)
+
+        measure {
+            viewModel.isLoading.toggle()
+            _ = try? viewWithModel.inspect()
+        }
+    }
+
+    // MARK: - Memory Tests
+
+    func testViewMemoryManagement() throws {
+        weak var weakView: {{ModuleName}}View?
+
+        autoreleasepool {
+            let view = {{ModuleName}}View()
+            weakView = view
+            _ = try? view.inspect()
+        }
+
+        // View should be deallocated
+        XCTAssertNil(weakView, "View should be deallocated")
+    }
+}

@@ -1,0 +1,239 @@
+//
+//  {{ModuleName}}Tests.swift
+//  {{ModuleName}}Tests
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import XCTest
+@testable import {{ModuleName}}
+
+final class {{ModuleName}}Tests: XCTestCase {
+
+    var sut: {{ModuleName}}!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        sut = {{ModuleName}}.shared
+    }
+
+    override func tearDownWithError() throws {
+        sut = nil
+        try super.tearDownWithError()
+    }
+
+    // MARK: - Initialization Tests
+
+    func testSharedInstance() throws {
+        XCTAssertNotNil({{ModuleName}}.shared)
+
+        // Test singleton behavior
+        let instance1 = {{ModuleName}}.shared
+        let instance2 = {{ModuleName}}.shared
+        XCTAssertTrue(instance1 === instance2)
+    }
+
+    func testCustomInitialization() throws {
+        let service = {{ModuleName}}Service()
+        let module = {{ModuleName}}(service: service)
+        XCTAssertNotNil(module)
+    }
+
+    // MARK: - Configuration Tests
+
+    func testConfiguration() throws {
+        let config = {{ModuleName}}Configuration(
+            environment: .development,
+            options: ["testKey": "testValue"]
+        )
+
+        XCTAssertNoThrow(sut.configure(with: config))
+    }
+
+    func testConfigurationEnvironments() throws {
+        let environments: [{{ModuleName}}Configuration.Environment] = [
+            .development,
+            .staging,
+            .production
+        ]
+
+        for environment in environments {
+            let config = {{ModuleName}}Configuration(environment: environment)
+            XCTAssertNoThrow(sut.configure(with: config))
+        }
+    }
+
+    // MARK: - Core Operation Tests
+
+    func testPerformCoreOperation() async throws {
+        // Configure module first
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        let result = try await sut.performCoreOperation()
+
+        XCTAssertNotNil(result)
+        // Add more specific assertions based on expected behavior
+    }
+
+    func testPerformCoreOperationWithoutConfiguration() async throws {
+        // Test behavior when module is not configured
+        do {
+            _ = try await sut.performCoreOperation()
+            // If we get here, the operation succeeded (might be valid behavior)
+        } catch {
+            // Expected if configuration is required
+            XCTAssertTrue(error is {{ModuleName}}Error)
+        }
+    }
+
+    // MARK: - Result Tests
+
+    func testResultCreation() throws {
+        let result = {{ModuleName}}Result(
+            isSuccess: true,
+            message: "Test successful",
+            data: ["key": "value"]
+        )
+
+        XCTAssertTrue(result.isSuccess)
+        XCTAssertEqual(result.message, "Test successful")
+        XCTAssertNotNil(result.data)
+        XCTAssertEqual(result.data?["key"] as? String, "value")
+    }
+
+    func testResultFailure() throws {
+        let result = {{ModuleName}}Result(
+            isSuccess: false,
+            message: "Test failed"
+        )
+
+        XCTAssertFalse(result.isSuccess)
+        XCTAssertEqual(result.message, "Test failed")
+        XCTAssertNil(result.data)
+    }
+
+    // MARK: - Configuration Model Tests
+
+    func testConfigurationModel() throws {
+        let config = {{ModuleName}}Configuration(
+            environment: .production,
+            options: ["apiKey": "test-key", "timeout": "30"]
+        )
+
+        XCTAssertEqual(config.environment, .production)
+        XCTAssertEqual(config.options["apiKey"] as? String, "test-key")
+        XCTAssertEqual(config.options["timeout"] as? String, "30")
+    }
+
+    func testConfigurationDefaultValues() throws {
+        let config = {{ModuleName}}Configuration()
+
+        XCTAssertEqual(config.environment, .production)
+        XCTAssertTrue(config.options.isEmpty)
+    }
+
+    // MARK: - Error Handling Tests
+
+    func testErrorHandling() async throws {
+        // Test various error scenarios
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // Depending on your implementation, test specific error cases
+        // This is a placeholder - replace with actual error scenarios
+        do {
+            _ = try await sut.performCoreOperation()
+        } catch let error as {{ModuleName}}Error {
+            // Handle specific module errors
+            switch error {
+            case .configurationMissing:
+                XCTFail("Configuration should be present")
+            case .operationFailed:
+                // This might be expected in certain test scenarios
+                break
+            }
+        } catch {
+            XCTFail("Unexpected error type: \\(error)")
+        }
+    }
+
+    // MARK: - Thread Safety Tests
+
+    func testConcurrentAccess() async throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<10 {
+                group.addTask {
+                    do {
+                        _ = try await self.sut.performCoreOperation()
+                    } catch {
+                        // Handle expected errors in concurrent environment
+                    }
+                }
+            }
+        }
+
+        // If we get here without crashing, concurrent access is working
+        XCTAssertTrue(true)
+    }
+
+    // MARK: - Performance Tests
+
+    func testPerformanceOfCoreOperation() throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        measure {
+            Task {
+                do {
+                    _ = try await sut.performCoreOperation()
+                } catch {
+                    // Handle errors in performance test
+                }
+            }
+        }
+    }
+
+    // MARK: - Memory Tests
+
+    func testMemoryUsage() throws {
+        weak var weakModule: {{ModuleName}}?
+
+        autoreleasepool {
+            let service = {{ModuleName}}Service()
+            let module = {{ModuleName}}(service: service)
+            weakModule = module
+
+            // Use the module
+            let config = {{ModuleName}}Configuration()
+            module.configure(with: config)
+        }
+
+        // Module should be deallocated after the autorelease pool
+        XCTAssertNil(weakModule, "Module should be deallocated")
+    }
+
+    // MARK: - Integration Tests
+
+    func testEndToEndFlow() async throws {
+        // Test complete workflow
+        let config = {{ModuleName}}Configuration(
+            environment: .development,
+            options: ["test": "integration"]
+        )
+
+        // Configure
+        sut.configure(with: config)
+
+        // Perform operation
+        let result = try await sut.performCoreOperation()
+
+        // Verify result
+        XCTAssertNotNil(result)
+        // Add specific assertions based on your module's behavior
+    }
+}

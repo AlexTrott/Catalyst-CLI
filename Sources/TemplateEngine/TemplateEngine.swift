@@ -87,7 +87,7 @@ public class TemplateEngine {
                 try processDirectory(
                     templateDirectory: child,
                     context: context,
-                    outputDirectory: outputPath,
+                    outputDirectory: outputDirectory,
                     basePath: basePath
                 )
             } else {

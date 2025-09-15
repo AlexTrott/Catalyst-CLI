@@ -1,0 +1,315 @@
+//
+//  {{ModuleName}}ServiceTests.swift
+//  {{ModuleName}}Tests
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import XCTest
+@testable import {{ModuleName}}
+
+final class {{ModuleName}}ServiceTests: XCTestCase {
+
+    var sut: {{ModuleName}}Service!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        sut = {{ModuleName}}Service()
+    }
+
+    override func tearDownWithError() throws {
+        sut = nil
+        try super.tearDownWithError()
+    }
+
+    // MARK: - Initialization Tests
+
+    func testServiceInitialization() throws {
+        XCTAssertNotNil(sut)
+    }
+
+    // MARK: - Configuration Tests
+
+    func testServiceConfiguration() throws {
+        let config = {{ModuleName}}Configuration(
+            environment: .development,
+            options: ["serviceKey": "serviceValue"]
+        )
+
+        XCTAssertNoThrow(sut.configure(with: config))
+    }
+
+    func testConfigurationWithDifferentEnvironments() throws {
+        let environments: [{{ModuleName}}Configuration.Environment] = [
+            .development,
+            .staging,
+            .production
+        ]
+
+        for environment in environments {
+            let config = {{ModuleName}}Configuration(environment: environment)
+            XCTAssertNoThrow(sut.configure(with: config))
+        }
+    }
+
+    func testMultipleConfigurations() throws {
+        let config1 = {{ModuleName}}Configuration(environment: .development)
+        let config2 = {{ModuleName}}Configuration(environment: .production)
+
+        sut.configure(with: config1)
+        sut.configure(with: config2)
+
+        // Service should handle multiple configurations gracefully
+        XCTAssertTrue(true)
+    }
+
+    // MARK: - Operation Tests
+
+    func testPerformOperation() async throws {
+        // Configure service first
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        let result = try await sut.performOperation()
+
+        XCTAssertNotNil(result)
+        // Add assertions based on expected service behavior
+    }
+
+    func testPerformOperationWithoutConfiguration() async throws {
+        // Test service behavior when not configured
+        do {
+            _ = try await sut.performOperation()
+            // Operation might succeed without configuration (depends on implementation)
+        } catch {
+            // Expected if configuration is required
+            XCTAssertTrue(error is {{ModuleName}}Error)
+        }
+    }
+
+    func testPerformOperationWithInvalidConfiguration() async throws {
+        let config = {{ModuleName}}Configuration(
+            environment: .development,
+            options: ["invalid": "config"]
+        )
+        sut.configure(with: config)
+
+        // Test how service handles potentially invalid configuration
+        do {
+            _ = try await sut.performOperation()
+        } catch {
+            // Expected if configuration validation fails
+            XCTAssertTrue(error is {{ModuleName}}Error)
+        }
+    }
+
+    // MARK: - Concurrent Operation Tests
+
+    func testConcurrentOperations() async throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // Test multiple concurrent operations
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<5 {
+                group.addTask { [weak self] in
+                    do {
+                        let result = try await self?.sut.performOperation()
+                        XCTAssertNotNil(result)
+                    } catch {
+                        // Handle expected errors in concurrent environment
+                        XCTAssertTrue(error is {{ModuleName}}Error)
+                    }
+                }
+            }
+        }
+    }
+
+    func testSequentialOperations() async throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // Test multiple sequential operations
+        for _ in 0..<3 {
+            let result = try await sut.performOperation()
+            XCTAssertNotNil(result)
+        }
+    }
+
+    // MARK: - State Management Tests
+
+    func testServiceState() throws {
+        // Test service maintains proper state
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // Add tests for service state if applicable
+        // This depends on your service implementation
+    }
+
+    func testServiceReset() throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // If your service has a reset method, test it
+        // sut.reset()
+
+        // Verify state is reset properly
+    }
+
+    // MARK: - Error Handling Tests
+
+    func testErrorHandling() async throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // Test various error scenarios specific to your service
+        // This is implementation-dependent
+        do {
+            _ = try await sut.performOperation()
+        } catch let error as {{ModuleName}}Error {
+            switch error {
+            case .configurationMissing:
+                XCTFail("Configuration should be present")
+            case .operationFailed(let reason):
+                XCTAssertNotNil(reason)
+            }
+        }
+    }
+
+    func testRecoveryFromError() async throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        // Test service recovery after an error
+        do {
+            _ = try await sut.performOperation()
+        } catch {
+            // After an error, service should still be usable
+            do {
+                _ = try await sut.performOperation()
+                // Should succeed or fail gracefully
+            } catch {
+                // Multiple failures might be expected
+            }
+        }
+    }
+
+    // MARK: - Performance Tests
+
+    func testOperationPerformance() throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        measure {
+            Task {
+                do {
+                    _ = try await sut.performOperation()
+                } catch {
+                    // Handle errors in performance test
+                }
+            }
+        }
+    }
+
+    func testConfigurationPerformance() throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+
+        measure {
+            sut.configure(with: config)
+        }
+    }
+
+    // MARK: - Memory Management Tests
+
+    func testServiceMemoryUsage() throws {
+        weak var weakService: {{ModuleName}}Service?
+
+        autoreleasepool {
+            let service = {{ModuleName}}Service()
+            weakService = service
+
+            let config = {{ModuleName}}Configuration()
+            service.configure(with: config)
+
+            // Use the service
+            Task {
+                do {
+                    _ = try await service.performOperation()
+                } catch {
+                    // Handle errors
+                }
+            }
+        }
+
+        // Service should be deallocated
+        XCTAssertNil(weakService, "Service should be deallocated")
+    }
+
+    // MARK: - Integration Tests
+
+    func testServiceIntegration() async throws {
+        // Test service as part of larger workflow
+        let config = {{ModuleName}}Configuration(
+            environment: .development,
+            options: ["integration": "test"]
+        )
+
+        sut.configure(with: config)
+
+        // Perform multiple operations to test integration
+        let result1 = try await sut.performOperation()
+        XCTAssertNotNil(result1)
+
+        let result2 = try await sut.performOperation()
+        XCTAssertNotNil(result2)
+
+        // Test that results are consistent or properly varied
+        // This depends on your service's expected behavior
+    }
+
+    // MARK: - Timeout Tests
+
+    func testOperationTimeout() async throws {
+        let config = {{ModuleName}}Configuration(
+            environment: .development,
+            options: ["timeout": "1"] // Very short timeout for testing
+        )
+        sut.configure(with: config)
+
+        // Test operation with timeout if supported
+        do {
+            _ = try await sut.performOperation()
+        } catch {
+            // Timeout error might be expected
+            if let serviceError = error as? {{ModuleName}}Error {
+                // Handle specific timeout error
+                switch serviceError {
+                case .operationFailed(let reason):
+                    XCTAssertTrue(reason.contains("timeout") || reason.contains("Timeout"))
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    // MARK: - Data Validation Tests
+
+    func testDataValidation() async throws {
+        let config = {{ModuleName}}Configuration(environment: .development)
+        sut.configure(with: config)
+
+        let result = try await sut.performOperation()
+
+        // Validate the structure and content of the result
+        XCTAssertNotNil(result)
+
+        // Add specific validation based on your service's return type
+        // For example:
+        // XCTAssertTrue(result.isSuccess)
+        // XCTAssertNotNil(result.message)
+        // XCTAssertFalse(result.message.isEmpty)
+    }
+}

@@ -1,0 +1,391 @@
+//
+//  {{ModuleName}}ViewModelTests.swift
+//  {{ModuleName}}Tests
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import XCTest
+import Combine
+@testable import {{ModuleName}}
+
+@MainActor
+final class {{ModuleName}}ViewModelTests: XCTestCase {
+
+    var sut: {{ModuleName}}ViewModel!
+    var cancellables: Set<AnyCancellable>!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        sut = {{ModuleName}}ViewModel()
+        cancellables = Set<AnyCancellable>()
+    }
+
+    override func tearDownWithError() throws {
+        cancellables.removeAll()
+        sut = nil
+        try super.tearDownWithError()
+    }
+
+    // MARK: - Initialization Tests
+
+    func testViewModelInitialization() throws {
+        XCTAssertNotNil(sut)
+        XCTAssertFalse(sut.isLoading)
+        XCTAssertNil(sut.errorMessage)
+    }
+
+    func testInitialState() throws {
+        XCTAssertFalse(sut.isLoading, "Initial loading state should be false")
+        XCTAssertNil(sut.errorMessage, "Initial error message should be nil")
+    }
+
+    // MARK: - Loading State Tests
+
+    func testLoadingStateChange() async throws {
+        let expectation = XCTestExpectation(description: "Loading state changes")
+        var loadingStates: [Bool] = []
+
+        sut.$isLoading
+            .sink { isLoading in
+                loadingStates.append(isLoading)
+                if loadingStates.count >= 3 { // Initial, true, false
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        sut.performAction()
+
+        await fulfillment(of: [expectation], timeout: 5.0)
+
+        XCTAssertEqual(loadingStates.count, 3)
+        XCTAssertFalse(loadingStates[0]) // Initial state
+        XCTAssertTrue(loadingStates[1])  // Loading started
+        XCTAssertFalse(loadingStates[2]) // Loading finished
+    }
+
+    func testLoadingStateDuringAction() async throws {
+        let loadingStarted = XCTestExpectation(description: "Loading started")
+        let loadingFinished = XCTestExpectation(description: "Loading finished")
+
+        sut.$isLoading
+            .dropFirst() // Skip initial value
+            .sink { isLoading in
+                if isLoading {
+                    loadingStarted.fulfill()
+                } else {
+                    loadingFinished.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        sut.performAction()
+
+        await fulfillment(of: [loadingStarted], timeout: 1.0)
+        XCTAssertTrue(sut.isLoading, "Should be loading during action")
+
+        await fulfillment(of: [loadingFinished], timeout: 5.0)
+        XCTAssertFalse(sut.isLoading, "Should not be loading after action completes")
+    }
+
+    // MARK: - Error Handling Tests
+
+    func testErrorMessageClearing() async throws {
+        // Set an error message
+        sut.errorMessage = "Test error"
+        XCTAssertEqual(sut.errorMessage, "Test error")
+
+        // Perform action should clear error
+        sut.performAction()
+        XCTAssertNil(sut.errorMessage, "Error message should be cleared when starting new action")
+    }
+
+    func testErrorMessagePublishing() throws {
+        let expectation = XCTestExpectation(description: "Error message published")
+        var errorMessages: [String?] = []
+
+        sut.$errorMessage
+            .sink { message in
+                errorMessages.append(message)
+                if errorMessages.count >= 2 {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        sut.errorMessage = "Test error"
+
+        wait(for: [expectation], timeout: 1.0)
+
+        XCTAssertEqual(errorMessages.count, 2)
+        XCTAssertNil(errorMessages[0]) // Initial state
+        XCTAssertEqual(errorMessages[1], "Test error")
+    }
+
+    // MARK: - Action Tests
+
+    func testPerformAction() async throws {
+        let expectation = XCTestExpectation(description: "Action completed")
+
+        sut.$isLoading
+            .dropFirst(2) // Skip initial and loading=true
+            .first()
+            .sink { isLoading in
+                XCTAssertFalse(isLoading)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        sut.performAction()
+
+        await fulfillment(of: [expectation], timeout: 5.0)
+    }
+
+    func testMultipleActionsSequentially() async throws {
+        let firstActionComplete = XCTestExpectation(description: "First action completed")
+        let secondActionComplete = XCTestExpectation(description: "Second action completed")
+
+        var completionCount = 0
+
+        sut.$isLoading
+            .dropFirst() // Skip initial value
+            .sink { isLoading in
+                if !isLoading {
+                    completionCount += 1
+                    if completionCount == 1 {
+                        firstActionComplete.fulfill()
+                    } else if completionCount == 2 {
+                        secondActionComplete.fulfill()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+
+        // Perform first action
+        sut.performAction()
+        await fulfillment(of: [firstActionComplete], timeout: 5.0)
+
+        // Perform second action
+        sut.performAction()
+        await fulfillment(of: [secondActionComplete], timeout: 5.0)
+
+        XCTAssertEqual(completionCount, 2)
+    }
+
+    func testConcurrentActions() async throws {
+        let expectation = XCTestExpectation(description: "Concurrent actions handled")
+        expectation.expectedFulfillmentCount = 2
+
+        sut.$isLoading
+            .dropFirst() // Skip initial value
+            .sink { isLoading in
+                if !isLoading {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        // Start two actions simultaneously
+        sut.performAction()
+        sut.performAction()
+
+        await fulfillment(of: [expectation], timeout: 5.0)
+    }
+
+    // MARK: - State Management Tests
+
+    func testStateConsistency() async throws {
+        let expectation = XCTestExpectation(description: "State remains consistent")
+
+        // Monitor state changes
+        Publishers.CombineLatest(sut.$isLoading, sut.$errorMessage)
+            .sink { isLoading, errorMessage in
+                // During loading, error message should be nil
+                if isLoading {
+                    XCTAssertNil(errorMessage, "Error message should be nil during loading")
+                }
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        sut.performAction()
+
+        await fulfillment(of: [expectation], timeout: 5.0)
+    }
+
+    func testStateAfterError() throws {
+        // Simulate an error condition
+        sut.errorMessage = "Simulated error"
+        XCTAssertNotNil(sut.errorMessage)
+
+        // Performing a new action should clear the error
+        sut.performAction()
+        XCTAssertNil(sut.errorMessage)
+    }
+
+    // MARK: - Memory Management Tests
+
+    func testViewModelMemoryManagement() throws {
+        weak var weakViewModel: {{ModuleName}}ViewModel?
+
+        autoreleasepool {
+            let viewModel = {{ModuleName}}ViewModel()
+            weakViewModel = viewModel
+
+            // Use the view model
+            viewModel.performAction()
+        }
+
+        XCTAssertNil(weakViewModel, "ViewModel should be deallocated")
+    }
+
+    func testCancellableMemoryManagement() throws {
+        let viewModel = {{ModuleName}}ViewModel()
+        var testCancellables = Set<AnyCancellable>()
+
+        viewModel.$isLoading
+            .sink { _ in }
+            .store(in: &testCancellables)
+
+        viewModel.$errorMessage
+            .sink { _ in }
+            .store(in: &testCancellables)
+
+        XCTAssertEqual(testCancellables.count, 2)
+
+        testCancellables.removeAll()
+        XCTAssertEqual(testCancellables.count, 0)
+    }
+
+    // MARK: - Performance Tests
+
+    func testActionPerformance() throws {
+        measure {
+            for _ in 0..<100 {
+                sut.performAction()
+            }
+        }
+    }
+
+    func testStateChangePerformance() throws {
+        var testCancellables = Set<AnyCancellable>()
+
+        measure {
+            sut.$isLoading
+                .sink { _ in }
+                .store(in: &testCancellables)
+        }
+
+        testCancellables.removeAll()
+    }
+
+    // MARK: - Publisher Tests
+
+    func testLoadingPublisher() throws {
+        let expectation = XCTestExpectation(description: "Loading publisher emits values")
+        var values: [Bool] = []
+
+        sut.$isLoading
+            .sink { value in
+                values.append(value)
+                if values.count >= 3 {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        sut.performAction()
+
+        wait(for: [expectation], timeout: 5.0)
+
+        XCTAssertTrue(values.contains(false)) // Initial and final state
+        XCTAssertTrue(values.contains(true))  // Loading state
+    }
+
+    func testErrorMessagePublisher() throws {
+        let expectation = XCTestExpectation(description: "Error message publisher emits values")
+        var values: [String?] = []
+
+        sut.$errorMessage
+            .sink { value in
+                values.append(value)
+                if values.count >= 3 {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        sut.errorMessage = "First error"
+        sut.errorMessage = "Second error"
+
+        wait(for: [expectation], timeout: 1.0)
+
+        XCTAssertEqual(values[0], nil)
+        XCTAssertEqual(values[1], "First error")
+        XCTAssertEqual(values[2], "Second error")
+    }
+
+    // MARK: - Edge Case Tests
+
+    func testRapidStateChanges() throws {
+        let expectation = XCTestExpectation(description: "Rapid state changes handled")
+        var changeCount = 0
+
+        sut.$isLoading
+            .sink { _ in
+                changeCount += 1
+                if changeCount >= 10 {
+                    expectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        // Trigger rapid state changes
+        for _ in 0..<5 {
+            sut.performAction()
+        }
+
+        wait(for: [expectation], timeout: 5.0)
+    }
+
+    func testNilErrorMessage() throws {
+        sut.errorMessage = "Error"
+        XCTAssertNotNil(sut.errorMessage)
+
+        sut.errorMessage = nil
+        XCTAssertNil(sut.errorMessage)
+    }
+
+    func testEmptyErrorMessage() throws {
+        sut.errorMessage = ""
+        XCTAssertEqual(sut.errorMessage, "")
+
+        sut.errorMessage = nil
+        XCTAssertNil(sut.errorMessage)
+    }
+
+    // MARK: - Integration Tests
+
+    func testViewModelIntegration() async throws {
+        // Test ViewModel as part of a larger workflow
+        let viewModel = {{ModuleName}}ViewModel()
+        var cancellables = Set<AnyCancellable>()
+
+        let integrationExpectation = XCTestExpectation(description: "Integration test completed")
+
+        Publishers.CombineLatest(viewModel.$isLoading, viewModel.$errorMessage)
+            .dropFirst() // Skip initial values
+            .sink { isLoading, errorMessage in
+                if !isLoading && errorMessage == nil {
+                    integrationExpectation.fulfill()
+                }
+            }
+            .store(in: &cancellables)
+
+        viewModel.performAction()
+
+        await fulfillment(of: [integrationExpectation], timeout: 5.0)
+    }
+}

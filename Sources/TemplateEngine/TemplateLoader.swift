@@ -13,10 +13,20 @@ public class TemplateLoader {
         // Default template paths
         var allSearchPaths = searchPaths
 
-        // Add built-in templates path
-        if let bundlePath = Bundle.main.resourcePath {
-            let templatesPath = Path(bundlePath) + "Templates"
-            allSearchPaths.append(templatesPath.string)
+        // Add built-in templates path from bundle
+        if let bundleResourcePath = Bundle.module.resourcePath {
+            let templatesPath = Path(bundleResourcePath) + "Templates"
+            if templatesPath.exists {
+                allSearchPaths.append(templatesPath.string)
+            }
+        }
+
+        // Alternative: try to find templates relative to the executable
+        if let bundleURL = Bundle.module.resourceURL {
+            let templatesPath = Path(bundleURL.path) + "Templates"
+            if templatesPath.exists {
+                allSearchPaths.append(templatesPath.string)
+            }
         }
 
         // Add current directory templates

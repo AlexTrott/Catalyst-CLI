@@ -1,0 +1,305 @@
+//
+//  {{ModuleName}}Tests.swift
+//  {{ModuleName}}Tests
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import XCTest
+import UIKit
+@testable import {{ModuleName}}
+
+final class {{ModuleName}}Tests: XCTestCase {
+
+    var sut: {{ModuleName}}!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        sut = {{ModuleName}}()
+    }
+
+    override func tearDownWithError() throws {
+        sut = nil
+        try super.tearDownWithError()
+    }
+
+    // MARK: - Initialization Tests
+
+    func testFeatureInitialization() throws {
+        XCTAssertNotNil(sut)
+    }
+
+    // MARK: - View Controller Creation Tests
+
+    func testCreateViewController() throws {
+        let viewController = sut.createViewController()
+
+        XCTAssertNotNil(viewController)
+        XCTAssertTrue(viewController is UIViewController)
+    }
+
+    func testViewControllerIsCorrectType() throws {
+        let viewController = sut.createViewController()
+
+        // If you have a specific view controller type, test for it
+        // XCTAssertTrue(viewController is {{ModuleName}}ViewController)
+    }
+
+    func testMultipleViewControllerCreation() throws {
+        let viewController1 = sut.createViewController()
+        let viewController2 = sut.createViewController()
+
+        XCTAssertNotNil(viewController1)
+        XCTAssertNotNil(viewController2)
+
+        // Each call should create a new instance
+        XCTAssertFalse(viewController1 === viewController2)
+    }
+
+    // MARK: - View Controller Configuration Tests
+
+    func testViewControllerConfiguration() throws {
+        let viewController = sut.createViewController()
+
+        // Test that view controller is properly configured
+        XCTAssertNotNil(viewController.view)
+
+        // Add more specific configuration tests based on your implementation
+        // For example:
+        // XCTAssertEqual(viewController.title, "{{ModuleName}}")
+        // XCTAssertNotNil(viewController.navigationItem)
+    }
+
+    // MARK: - Navigation Tests
+
+    func testViewControllerNavigation() throws {
+        let navigationController = UINavigationController()
+        let viewController = sut.createViewController()
+
+        navigationController.pushViewController(viewController, animated: false)
+
+        XCTAssertEqual(navigationController.viewControllers.count, 1)
+        XCTAssertEqual(navigationController.topViewController, viewController)
+    }
+
+    func testViewControllerPresentation() throws {
+        let parentViewController = UIViewController()
+        let viewController = sut.createViewController()
+
+        parentViewController.present(viewController, animated: false)
+
+        XCTAssertEqual(parentViewController.presentedViewController, viewController)
+    }
+
+    // MARK: - Memory Management Tests
+
+    func testViewControllerMemoryManagement() throws {
+        weak var weakViewController: UIViewController?
+
+        autoreleasepool {
+            let viewController = sut.createViewController()
+            weakViewController = viewController
+
+            // Use the view controller
+            _ = viewController.view
+        }
+
+        // View controller should be deallocated
+        XCTAssertNil(weakViewController, "View controller should be deallocated")
+    }
+
+    func testFeatureMemoryManagement() throws {
+        weak var weakFeature: {{ModuleName}}?
+
+        autoreleasepool {
+            let feature = {{ModuleName}}()
+            weakFeature = feature
+
+            _ = feature.createViewController()
+        }
+
+        // Feature should be deallocated
+        XCTAssertNil(weakFeature, "Feature should be deallocated")
+    }
+
+    // MARK: - Integration Tests
+
+    func testFeatureIntegration() throws {
+        // Test complete feature workflow
+        let feature = {{ModuleName}}()
+        let viewController = feature.createViewController()
+
+        // Load the view
+        viewController.loadViewIfNeeded()
+
+        // Test that the view is properly set up
+        XCTAssertNotNil(viewController.view)
+        XCTAssertFalse(viewController.view.subviews.isEmpty)
+    }
+
+    func testFeatureWithNavigationController() throws {
+        let navigationController = UINavigationController()
+        let viewController = sut.createViewController()
+
+        navigationController.setViewControllers([viewController], animated: false)
+
+        // Test navigation setup
+        XCTAssertEqual(navigationController.viewControllers.count, 1)
+        XCTAssertNotNil(viewController.navigationController)
+        XCTAssertEqual(viewController.navigationController, navigationController)
+    }
+
+    // MARK: - Performance Tests
+
+    func testViewControllerCreationPerformance() throws {
+        measure {
+            for _ in 0..<100 {
+                _ = sut.createViewController()
+            }
+        }
+    }
+
+    func testViewLoadingPerformance() throws {
+        let viewController = sut.createViewController()
+
+        measure {
+            viewController.loadViewIfNeeded()
+        }
+    }
+
+    // MARK: - Error Handling Tests
+
+    func testFeatureErrorHandling() throws {
+        // Test error scenarios if applicable
+        let viewController = sut.createViewController()
+
+        // Test error handling in view controller
+        viewController.loadViewIfNeeded()
+
+        // Add specific error handling tests based on your implementation
+    }
+
+    // MARK: - State Management Tests
+
+    func testFeatureState() throws {
+        let viewController = sut.createViewController()
+        viewController.loadViewIfNeeded()
+
+        // Test initial state
+        // Add assertions based on your feature's state management
+
+        // Test state changes if applicable
+        viewController.viewWillAppear(false)
+        viewController.viewDidAppear(false)
+
+        // Verify state after lifecycle events
+    }
+
+    // MARK: - Accessibility Tests
+
+    func testAccessibility() throws {
+        let viewController = sut.createViewController()
+        viewController.loadViewIfNeeded()
+
+        // Test accessibility setup
+        XCTAssertTrue(viewController.view.isAccessibilityElement ||
+                     !viewController.view.accessibilityElements?.isEmpty ?? false)
+    }
+
+    // MARK: - Dark Mode Tests
+
+    func testDarkModeSupport() throws {
+        let viewController = sut.createViewController()
+        viewController.loadViewIfNeeded()
+
+        // Test appearance in different modes
+        viewController.overrideUserInterfaceStyle = .light
+        viewController.view.setNeedsLayout()
+        viewController.view.layoutIfNeeded()
+
+        viewController.overrideUserInterfaceStyle = .dark
+        viewController.view.setNeedsLayout()
+        viewController.view.layoutIfNeeded()
+
+        // Test that view handles both modes gracefully
+        XCTAssertNotNil(viewController.view)
+    }
+
+    // MARK: - Orientation Tests
+
+    func testOrientationSupport() throws {
+        let viewController = sut.createViewController()
+        viewController.loadViewIfNeeded()
+
+        // Test different orientations if supported
+        let window = UIWindow(frame: UIScreen.main.bounds)
+        window.rootViewController = viewController
+        window.makeKeyAndVisible()
+
+        // Simulate orientation changes
+        viewController.viewWillTransition(to: CGSize(width: 375, height: 812),
+                                         with: MockTransitionCoordinator())
+
+        XCTAssertNotNil(viewController.view)
+    }
+
+    // MARK: - Deep Link Tests
+
+    func testDeepLinkSupport() throws {
+        // Test deep link handling if your feature supports it
+        let viewController = sut.createViewController()
+
+        // Test handling of deep link parameters
+        // This depends on your feature's deep link implementation
+    }
+}
+
+// MARK: - Mock Classes
+
+private class MockTransitionCoordinator: NSObject, UIViewControllerTransitionCoordinator {
+    var isAnimated: Bool = false
+    var presentationStyle: UIModalPresentationStyle = .none
+    var initiallyInteractive: Bool = false
+    var isInterruptible: Bool = false
+    var isInteractive: Bool = false
+    var isCancelled: Bool = false
+    var transitionDuration: TimeInterval = 0
+    var percentComplete: CGFloat = 0
+    var completionVelocity: CGFloat = 0
+    var completionCurve: UIView.AnimationCurve = .linear
+    var targetTransform: CGAffineTransform = .identity
+
+    var containerView: UIView = UIView()
+
+    func animate(alongsideTransition animation: ((UIViewControllerTransitionCoordinatorContext) -> Void)?,
+                completion: ((UIViewControllerTransitionCoordinatorContext) -> Void)? = nil) -> Bool {
+        animation?(self)
+        completion?(self)
+        return true
+    }
+
+    func animateAlongsideTransition(in view: UIView?,
+                                  animation: ((UIViewControllerTransitionCoordinatorContext) -> Void)?,
+                                  completion: ((UIViewControllerTransitionCoordinatorContext) -> Void)? = nil) -> Bool {
+        animation?(self)
+        completion?(self)
+        return true
+    }
+
+    func notifyWhenInteractionEnds(_ handler: @escaping (UIViewControllerTransitionCoordinatorContext) -> Void) {
+        handler(self)
+    }
+
+    func notifyWhenInteractionChanges(_ handler: @escaping (UIViewControllerTransitionCoordinatorContext) -> Void) {
+        handler(self)
+    }
+
+    func viewController(forKey key: UITransitionContextViewControllerKey) -> UIViewController? {
+        return nil
+    }
+
+    func view(forKey key: UITransitionContextViewKey) -> UIView? {
+        return nil
+    }
+}

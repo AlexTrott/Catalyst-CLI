@@ -1,0 +1,44 @@
+//
+//  {{ModuleName}}.swift
+//  {{ModuleName}}
+//
+//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
+//
+
+import Foundation
+
+/// Shared utilities and extensions for {{ModuleName|snakeCase|replace:"_":" "|capitalize}}
+///
+/// This module provides common functionality, utilities, and extensions that can be shared
+/// across multiple features and modules in the application.
+public struct {{ModuleName}} {
+
+    /// Version information for this shared module
+    public static let version = "1.0.0"
+
+    /// Module identifier
+    public static let identifier = "{{BundleIdentifier|default:"com.catalyst"}}.{{ModuleName|lowercase}}"
+
+    /// Shared instance for convenient access
+    public static let shared = {{ModuleName}}()
+
+    /// Private initializer to encourage shared instance usage
+    private init() {
+        Self.configure()
+    }
+
+    /// Configure the shared module
+    private static func configure() {
+        // Add any one-time setup code here
+        #if DEBUG
+        print("{{ModuleName}} initialized (v\(version))")
+        #endif
+    }
+
+    /// Check if the module is properly configured
+    public static var isConfigured: Bool {
+        // Add validation logic here
+        return true
+    }
+}
