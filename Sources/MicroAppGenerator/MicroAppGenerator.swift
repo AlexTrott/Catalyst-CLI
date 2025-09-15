@@ -116,12 +116,13 @@ public class MicroAppGenerator {
           \(configuration.featureName)App:
             type: application
             platform: iOS
-            deploymentTarget: "16.0"
+            deploymentTarget: "14.0"
             sources:
               - \(configuration.featureName)App
               - Assets.xcassets
             dependencies:
               - package: \(configuration.featureName)
+              - package: \(configuration.featureName)Interface
             info:
               path: Info.plist
               properties:

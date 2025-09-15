@@ -11,10 +11,11 @@ targets:
   {{ModuleName}}App:
     type: application
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "15.0"
     sources:
       - {{ModuleName}}App
     dependencies:
+      - package: {{ModuleName}}Interface
       - package: {{ModuleName}}
     info:
       path: Info.plist

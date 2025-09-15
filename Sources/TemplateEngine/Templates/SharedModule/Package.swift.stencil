@@ -1,35 +1,39 @@
-// swift-tools-version: {{SwiftVersion|default:"5.9"}}
+// swift-tools-version: {{SwiftVersion}}
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
     name: "{{ModuleName}}",
-    platforms: [
-        {% for platform in Platforms %}{{platform}}{% if not forloop.last %}, {% endif %}{% endfor %}
+    platforms: [{% for platform in Platforms %}
+        {{platform}}{% if not forloop.last %},{% endif %}{% endfor %}
     ],
     products: [
-        .library(
-            name: "{{ModuleName}}",
-            targets: ["{{ModuleName}}"]
-        )
+        .library(name: "{{ModuleName}}Interface", targets: ["{{ModuleName}}Interface"]),
+        .library(name: "{{ModuleName}}", targets: ["{{ModuleName}}"])
     ],
-    dependencies: [
-        // Add your package dependencies here
-        {% for dep in Dependencies %}
-        {% if dep.url %}.package(url: "{{dep.url}}", from: "{{dep.version|default:"1.0.0"}}"){% else %}.package(path: "../{{dep.name}}"){% endif %}{% if not forloop.last %},{% endif %}
-        {% endfor %}
+    dependencies: [{% for dependency in Dependencies %}
+        .package(url: "{{dependency.url}}", from: "{{dependency.version|default:'1.0.0'}}"){% if not forloop.last %},{% endif %}{% endfor %}
     ],
     targets: [
         .target(
+            name: "{{ModuleName}}Interface"
+        ),
+        .target(
             name: "{{ModuleName}}",
             dependencies: [
-                {% for dep in Dependencies %}"{{dep.name}}"{% if not forloop.last %}, {% endif %}{% endfor %}
+                {% for dependency in Dependencies %}
+                "{{dependency.name}}",
+                {% endfor %}
+                "{{ModuleName}}Interface" 
             ]
         ),
         .testTarget(
             name: "{{ModuleName}}Tests",
-            dependencies: ["{{ModuleName}}"]
+            dependencies: [
+                "{{ModuleName}}Interface",
+                "{{ModuleName}}"
+            ]
         )
     ]
 )

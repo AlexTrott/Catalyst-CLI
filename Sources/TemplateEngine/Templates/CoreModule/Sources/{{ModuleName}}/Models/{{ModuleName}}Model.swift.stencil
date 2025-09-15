@@ -2,7 +2,7 @@
 //  {{ModuleName}}Model.swift
 //  {{ModuleName}}
 //
-//  Created by {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
+//  Created on on on on {{Author|default:"Catalyst CLI"}} on {{Date|date:"MM/dd/yyyy"}}.
 //  Copyright © {{Year}} {% if OrganizationName %}{{OrganizationName}}{% else %}All rights reserved{% endif %}.
 //
 

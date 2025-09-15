@@ -9,22 +9,31 @@ let package = Package(
         {{platform}}{% if not forloop.last %},{% endif %}{% endfor %}
     ],
     products: [
-        .library(
-            name: "{{ModuleName}}",
-            targets: ["{{ModuleName}}"]
-        )
+        .library(name: "{{ModuleName}}Interface", targets: ["{{ModuleName}}Interface"]),
+        .library(name: "{{ModuleName}}", targets: ["{{ModuleName}}"])
     ],
     dependencies: [{% for dependency in Dependencies %}
         .package(url: "{{dependency.url}}", from: "{{dependency.version|default:'1.0.0'}}"){% if not forloop.last %},{% endif %}{% endfor %}
     ],
     targets: [
         .target(
+            name: "{{ModuleName}}Interface"
+        ),
+        .target(
             name: "{{ModuleName}}",
-            dependencies: [{% for dependency in Dependencies %}"{{dependency.name}}"{% if not forloop.last %}, {% endif %}{% endfor %}]
+            dependencies: [
+                {% for dependency in Dependencies %}
+                "{{dependency.name}}",
+                {% endfor %}
+                "{{ModuleName}}Interface" 
+            ]
         ),
         .testTarget(
             name: "{{ModuleName}}Tests",
-            dependencies: ["{{ModuleName}}"]
+            dependencies: [
+                "{{ModuleName}}Interface",
+                "{{ModuleName}}"
+            ]
         )
     ]
 )

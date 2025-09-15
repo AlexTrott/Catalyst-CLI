@@ -94,7 +94,7 @@ public struct ModulePaths: Codable {
         return ModulePaths(
             coreModules: ".",
             featureModules: ".",
-            sharedModules: ".",
+            sharedModules: "./Modules/Shared",
             microApps: "./MicroApps"
         )
     }
@@ -199,6 +199,7 @@ public struct CatalystConfiguration: Codable {
         return ModulePaths(
             coreModules: otherPaths.coreModules ?? self.paths.coreModules,
             featureModules: otherPaths.featureModules ?? self.paths.featureModules,
+            sharedModules: otherPaths.sharedModules ?? self.paths.sharedModules,
             microApps: otherPaths.microApps ?? self.paths.microApps
         )
     }

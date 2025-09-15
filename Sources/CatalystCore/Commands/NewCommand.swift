@@ -175,7 +175,7 @@ public struct NewCommand: AsyncParsableCommand {
         case .core:
             return config.paths.coreModules ?? "."
         case .shared:
-            return config.paths.sharedModules ?? "."
+            return config.paths.sharedModules ?? "./Modules/Shared"
         case .feature:
             return config.paths.featureModules ?? "."
         case .microapp:
