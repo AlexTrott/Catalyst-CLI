@@ -11,9 +11,10 @@ import MicroAppGenerator
 
 /// Create new Swift modules from templates.
 ///
-/// The `NewCommand` supports creating three types of modules:
+/// The `NewCommand` supports creating four types of modules:
 /// - **Core modules**: Business logic, services, and models
 /// - **Feature modules**: UI components with companion MicroApp for testing
+/// - **Shared modules**: Shared utilities, extensions, and common components
 /// - **MicroApps**: Complete iOS applications for isolated testing
 ///
 /// ## Feature Module Creation
@@ -34,6 +35,11 @@ import MicroAppGenerator
 /// Create a core module for business logic:
 /// ```bash
 /// catalyst new core NetworkingCore
+/// ```
+///
+/// Create a shared module for utilities:
+/// ```bash
+/// catalyst new shared AnalyticsKit
 /// ```
 ///
 /// Create a feature module with companion MicroApp:
@@ -57,6 +63,7 @@ public struct NewCommand: AsyncParsableCommand {
         usage: """
         catalyst new <type> <name> [options]
         catalyst new core NetworkingCore
+        catalyst new shared AnalyticsKit
         catalyst new feature AuthenticationFeature --author "John Doe"
         catalyst new microapp TestApp
         """,
@@ -64,6 +71,7 @@ public struct NewCommand: AsyncParsableCommand {
         Creates a new Swift package module or MicroApp from a template.
 
         Core modules: Create business logic and service layers
+        Shared modules: Create shared utilities, extensions, and common components (recommended to suffix with 'Kit')
         Feature modules: Create UI components with automatic companion MicroApp for testing
         MicroApps: Create standalone iOS applications for isolated testing
 
@@ -71,7 +79,7 @@ public struct NewCommand: AsyncParsableCommand {
         """
     )
 
-    @Argument(help: "The type of module to create (core, feature, microapp)")
+    @Argument(help: "The type of module to create (core, shared, feature, microapp)")
     public var moduleType: String
 
     @Argument(help: "The name of the module")
@@ -166,6 +174,8 @@ public struct NewCommand: AsyncParsableCommand {
         switch moduleType {
         case .core:
             return config.paths.coreModules ?? "."
+        case .shared:
+            return config.paths.sharedModules ?? "."
         case .feature:
             return config.paths.featureModules ?? "."
         case .microapp:
@@ -173,12 +183,24 @@ public struct NewCommand: AsyncParsableCommand {
         }
     }
 
-    private func validateInputs(targetPath: String) throws {
+    private mutating func validateInputs(targetPath: String) throws {
         Console.printStep(1, total: 4, message: "Validating inputs...")
 
         // Validate module type
-        guard let _ = ModuleType.from(string: moduleType) else {
+        guard let moduleTypeEnum = ModuleType.from(string: moduleType) else {
             throw CatalystError.invalidModuleName("Unsupported module type: \(moduleType)")
+        }
+
+        // For shared modules, recommend 'Kit' suffix if not already present
+        if moduleTypeEnum == .shared && !moduleName.hasSuffix("Kit") {
+            Console.newLine()
+            Console.print("💡 Recommendation: Consider using '\(moduleName)Kit' for consistency with shared module naming conventions.", type: .warning)
+            Console.print("Would you like to rename it to '\(moduleName)Kit'? (y/n): ", type: .info)
+
+            if let response = readLine()?.lowercased(), response == "y" || response == "yes" {
+                moduleName = "\(moduleName)Kit"
+                Console.print("✓ Module renamed to: \(moduleName)", type: .success)
+            }
         }
 
         // Validate module name
@@ -440,6 +462,8 @@ public struct NewCommand: AsyncParsableCommand {
         switch moduleType {
         case .core:
             return "Modules/Core"
+        case .shared:
+            return "Modules/Shared"
         case .feature:
             return "Modules/Features"
         case .microapp:

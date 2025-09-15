@@ -75,15 +75,18 @@ public class ConfigurationManager {
 public struct ModulePaths: Codable {
     public var coreModules: String?
     public var featureModules: String?
+    public var sharedModules: String?
     public var microApps: String?
 
     public init(
         coreModules: String? = nil,
         featureModules: String? = nil,
+        sharedModules: String? = nil,
         microApps: String? = nil
     ) {
         self.coreModules = coreModules
         self.featureModules = featureModules
+        self.sharedModules = sharedModules
         self.microApps = microApps
     }
 
@@ -91,6 +94,7 @@ public struct ModulePaths: Codable {
         return ModulePaths(
             coreModules: ".",
             featureModules: ".",
+            sharedModules: ".",
             microApps: "./MicroApps"
         )
     }

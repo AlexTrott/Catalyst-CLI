@@ -8,6 +8,7 @@ public enum ModuleType: String, CaseIterable {
     case core
     case feature
     case microapp
+    case shared
 
     public var displayName: String {
         switch self {
@@ -17,6 +18,8 @@ public enum ModuleType: String, CaseIterable {
             return "Feature Module"
         case .microapp:
             return "MicroApp"
+        case .shared:
+            return "Shared Module"
         }
     }
 
@@ -28,12 +31,14 @@ public enum ModuleType: String, CaseIterable {
             return "A module containing UI components with automatic companion MicroApp"
         case .microapp:
             return "A standalone iOS app for testing a single feature in isolation"
+        case .shared:
+            return "A shared module containing utilities, extensions, and common components"
         }
     }
 
     public var templateName: String {
         switch self {
-        case .core, .feature:
+        case .core, .feature, .shared:
             return rawValue.capitalized + "Module"
         case .microapp:
             return "MicroApp"
@@ -48,6 +53,16 @@ public enum ModuleType: String, CaseIterable {
                 "Sources/{{ModuleName}}/Models/",
                 "Sources/{{ModuleName}}/Services/",
                 "Sources/{{ModuleName}}/Extensions/",
+                "Tests/{{ModuleName}}Tests/",
+                "Tests/{{ModuleName}}Tests/Mocks/"
+            ]
+        case .shared:
+            return [
+                "Sources/{{ModuleName}}/",
+                "Sources/{{ModuleName}}/Extensions/",
+                "Sources/{{ModuleName}}/Utilities/",
+                "Sources/{{ModuleName}}/Protocols/",
+                "Sources/{{ModuleName}}/Models/",
                 "Tests/{{ModuleName}}Tests/",
                 "Tests/{{ModuleName}}Tests/Mocks/"
             ]
@@ -80,6 +95,12 @@ public enum ModuleType: String, CaseIterable {
                 "Sources/{{ModuleName}}/{{ModuleName}}Service.swift",
                 "Sources/{{ModuleName}}/Models/{{ModuleName}}Model.swift"
             ]
+        case .shared:
+            return [
+                "Sources/{{ModuleName}}/{{ModuleName}}.swift",
+                "Sources/{{ModuleName}}/Extensions/Foundation+Extensions.swift",
+                "Sources/{{ModuleName}}/Utilities/{{ModuleName}}Utilities.swift"
+            ]
         case .feature:
             return [
                 "Sources/{{ModuleName}}/{{ModuleName}}.swift",
@@ -106,6 +127,11 @@ public enum ModuleType: String, CaseIterable {
                 "Tests/{{ModuleName}}Tests/{{ModuleName}}Tests.swift",
                 "Tests/{{ModuleName}}Tests/{{ModuleName}}ServiceTests.swift"
             ]
+        case .shared:
+            return [
+                "Tests/{{ModuleName}}Tests/{{ModuleName}}Tests.swift",
+                "Tests/{{ModuleName}}Tests/UtilitiesTests.swift"
+            ]
         case .feature:
             return [
                 "Tests/{{ModuleName}}Tests/{{ModuleName}}Tests.swift",
@@ -122,6 +148,8 @@ public enum ModuleType: String, CaseIterable {
     public var dependencies: [String] {
         switch self {
         case .core:
+            return ["Foundation"]
+        case .shared:
             return ["Foundation"]
         case .feature:
             return ["Foundation", "UIKit", "SwiftUI"]
@@ -437,6 +465,28 @@ public struct \(configuration.name) {
 }
 """
 
+        case .shared:
+            return """
+//
+//  \(configuration.name).swift
+//  \(configuration.name)
+//
+//  Created by \(author) on \(date).
+//
+
+import Foundation
+
+/// Shared utilities and extensions for the \(configuration.name) module
+public struct \(configuration.name) {
+
+    /// Initialize the \(configuration.name) shared module
+    public init() {}
+
+    /// Version information for this shared module
+    public static let version = "1.0.0"
+}
+"""
+
         case .microapp:
             // MicroApp is handled by MicroAppGenerator, not PackageGenerator
             return ""
@@ -532,6 +582,10 @@ final class \(configuration.name)Tests: XCTestCase {
             return header + generateCoordinatorContent(configuration)
         } else if fileName.contains("Model") {
             return header + generateModelContent(configuration)
+        } else if fileName.contains("Foundation+Extensions") {
+            return header + generateFoundationExtensionsContent(configuration)
+        } else if fileName.contains("Utilities") {
+            return header + generateUtilitiesContent(configuration)
         } else {
             return header + generateMainSourceFile(configuration)
         }
@@ -738,6 +792,75 @@ public struct \(configuration.name)Model: Codable, Equatable {
         self.id = UUID()
         self.name = name
         self.createdAt = Date()
+    }
+}
+"""
+    }
+
+    private func generateFoundationExtensionsContent(_ configuration: ModuleConfiguration) -> String {
+        return """
+import Foundation
+
+// MARK: - String Extensions
+
+public extension String {
+    /// Example extension - replace with your actual implementation
+    var trimmed: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+// MARK: - Date Extensions
+
+public extension Date {
+    /// Example extension - replace with your actual implementation
+    var isToday: Bool {
+        Calendar.current.isDateInToday(self)
+    }
+}
+
+// MARK: - Collection Extensions
+
+public extension Collection {
+    /// Safe subscript that returns nil instead of crashing
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}
+"""
+    }
+
+    private func generateUtilitiesContent(_ configuration: ModuleConfiguration) -> String {
+        return """
+import Foundation
+
+/// Utilities for \(configuration.name)
+public enum \(configuration.name)Utilities {
+
+    // MARK: - Constants
+
+    public enum Constants {
+        public static let defaultTimeout: TimeInterval = 30.0
+        public static let animationDuration: TimeInterval = 0.3
+    }
+
+    // MARK: - Helper Methods
+
+    /// Example utility method - replace with your actual implementation
+    public static func formatDate(_ date: Date, style: DateFormatter.Style = .medium) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = style
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    /// Example async utility method
+    public static func performAsyncOperation<T>(
+        operation: () async throws -> T,
+        timeout: TimeInterval = Constants.defaultTimeout
+    ) async throws -> T {
+        // Implement your async utility logic here
+        return try await operation()
     }
 }
 """
