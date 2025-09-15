@@ -8,6 +8,7 @@ import ProjectSpec
 import WorkspaceManager
 import Utilities
 import AppIconGenerator
+import enum PackageGenerator.Platform
 
 /// Generates complete iOS MicroApps for isolated feature testing.
 ///
@@ -64,308 +65,97 @@ public class MicroAppGenerator {
         // Create MicroApp directory
         try microAppPath.mkpath()
 
-        // Generate project.yml for XcodeGen
-        try generateProjectYML(configuration, at: microAppPath)
+        // Use TemplateEngine to generate from MicroApp templates
+        try generateFromTemplate(configuration, at: microAppPath)
 
-        // Create app source directory
-        let appSourcePath = microAppPath + "\(configuration.featureName)App"
-        try appSourcePath.mkpath()
-
-        // Generate iOS app boilerplate
-        try generateAppDelegate(configuration, at: appSourcePath)
-        try generateSceneDelegate(configuration, at: appSourcePath)
-        try generateContentView(configuration, at: appSourcePath)
-        try generateDependencyContainer(configuration, at: appSourcePath)
-        try generateInfoPlist(configuration, at: microAppPath)
-
-        // Create Assets and Resources
+        // Create Assets and Resources (still hardcoded as these aren't templated)
         try createAssetsDirectory(configuration, at: microAppPath)
         try generateLaunchScreen(configuration, at: microAppPath)
+        try generateInfoPlist(configuration, at: microAppPath)
 
         // Generate Xcode project using XcodeGen (if available)
         try generateXcodeProject(at: microAppPath)
     }
 
-    // MARK: - Project Configuration
+    // MARK: - Template-based Generation
 
-    private func generateProjectYML(_ configuration: MicroAppConfiguration, at path: Path) throws {
-        let projectYMLContent = generateProjectYMLContent(configuration)
-        let projectYMLPath = path + "project.yml"
+    private func generateFromTemplate(_ configuration: MicroAppConfiguration, at path: Path) throws {
+        // Create template variables for MicroApp generation
+        let templateVariables = createTemplateVariables(configuration)
 
-        try projectYMLContent.write(to: projectYMLPath.url, atomically: true, encoding: .utf8)
+        // Generate MicroApp from templates using the TemplateEngine
+        try templateEngine.processTemplateDirectory(
+            named: "MicroApp",
+            with: templateVariables,
+            to: path.string
+        )
     }
 
-    private func generateProjectYMLContent(_ configuration: MicroAppConfiguration) -> String {
-        let bundleId = configuration.bundleIdentifier ?? "com.catalyst.\(configuration.featureName.lowercased())app"
+    private func createTemplateVariables(_ configuration: MicroAppConfiguration) -> [String: Any] {
+        let currentDate = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM/dd/yyyy"
 
-        // When creating as part of a feature module, the package is a sibling directory
-        // Otherwise, it's in the parent directory
-        let packagePath = configuration.isLocalPackage ? "../\(configuration.featureName)" : "../../\(configuration.featureName)"
+        let yearFormatter = DateFormatter()
+        yearFormatter.dateFormat = "yyyy"
 
-        return """
-        name: \(configuration.featureName)App
+        // Extract iOS deployment target from platform version if available
+        let deploymentTarget = extractDeploymentTarget(configuration)
 
-        options:
-          bundleIdPrefix: \(bundleId)
+        var variables: [String: Any] = [
+            "ModuleName": configuration.featureName,
+            "Date": currentDate,
+            "Year": yearFormatter.string(from: currentDate)
+        ]
 
-        packages:
-          \(configuration.featureName):
-            path: \(packagePath)
-
-        targets:
-          \(configuration.featureName)App:
-            type: application
-            platform: iOS
-            deploymentTarget: "14.0"
-            sources:
-              - \(configuration.featureName)App
-              - Assets.xcassets
-            dependencies:
-              - package: \(configuration.featureName)
-              - package: \(configuration.featureName)Interface
-            info:
-              path: Info.plist
-              properties:
-                CFBundleDisplayName: \(configuration.featureName)
-                CFBundleIdentifier: \(bundleId)
-                CFBundleVersion: "1"
-                CFBundleShortVersionString: "1.0"
-                UILaunchScreen:
-                  UIColorName: ""
-                  UIImageName: ""
-                UISupportedInterfaceOrientations:
-                  - UIInterfaceOrientationPortrait
-                UISupportedInterfaceOrientations~ipad:
-                  - UIInterfaceOrientationPortrait
-                  - UIInterfaceOrientationLandscapeLeft
-                  - UIInterfaceOrientationLandscapeRight
-                  - UIInterfaceOrientationPortraitUpsideDown
-            settings:
-              PRODUCT_BUNDLE_IDENTIFIER: \(bundleId)
-              DEVELOPMENT_TEAM: ""  # Set this to your team ID
-
-        schemes:
-          \(configuration.featureName)App:
-            build:
-              targets:
-                \(configuration.featureName)App: all
-            run:
-              config: Debug
-        """
-    }
-
-    // MARK: - iOS App Files Generation
-
-    private func generateAppDelegate(_ configuration: MicroAppConfiguration, at path: Path) throws {
-        let appDelegateContent = """
-        //
-        //  AppDelegate.swift
-        //  \(configuration.featureName)App
-        //
-        //  Created by Catalyst CLI on \(DateFormatter.shortDateFormatter.string(from: Date())).
-        //
-
-        import UIKit
-        import \(configuration.featureName)
-
-        @main
-        class AppDelegate: UIResponder, UIApplicationDelegate {
-
-            func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-
-                // Initialize the \(configuration.featureName) module
-                setupDependencies()
-
-                return true
-            }
-
-            // MARK: UISceneSession Lifecycle
-
-            func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-                return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-            }
-
-            private func setupDependencies() {
-                // Configure any dependencies for the \(configuration.featureName) module
-                DependencyContainer.shared.configure()
-            }
+        // Add optional configuration values
+        if let author = configuration.author {
+            variables["Author"] = author
         }
-        """
 
-        let appDelegatePath = path + "AppDelegate.swift"
-        try appDelegateContent.write(to: appDelegatePath.url, atomically: true, encoding: .utf8)
-    }
-
-    private func generateSceneDelegate(_ configuration: MicroAppConfiguration, at path: Path) throws {
-        let sceneDelegateContent = """
-        //
-        //  SceneDelegate.swift
-        //  \(configuration.featureName)App
-        //
-        //  Created by Catalyst CLI on \(DateFormatter.shortDateFormatter.string(from: Date())).
-        //
-
-        import UIKit
-        import SwiftUI
-        import \(configuration.featureName)
-
-        class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-
-            var window: UIWindow?
-
-            func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-                guard let windowScene = (scene as? UIWindowScene) else { return }
-
-                window = UIWindow(windowScene: windowScene)
-
-                // Create the main view for the \(configuration.featureName) feature
-                let contentView = \(configuration.featureName).createSwiftUIView()
-                let hostingController = UIHostingController(rootView: contentView)
-
-                window?.rootViewController = hostingController
-                window?.makeKeyAndVisible()
-            }
+        if let organizationName = configuration.organizationName {
+            variables["OrganizationName"] = organizationName
         }
-        """
 
-        let sceneDelegatePath = path + "SceneDelegate.swift"
-        try sceneDelegateContent.write(to: sceneDelegatePath.url, atomically: true, encoding: .utf8)
+        if let bundleIdentifier = configuration.bundleIdentifier {
+            variables["BundleIdentifier"] = bundleIdentifier
+        }
+
+        if let deploymentTarget = deploymentTarget {
+            variables["DeploymentTarget"] = deploymentTarget
+        }
+
+        return variables
     }
 
-    private func generateContentView(_ configuration: MicroAppConfiguration, at path: Path) throws {
-        let contentViewContent = """
-        //
-        //  ContentView.swift
-        //  \(configuration.featureName)App
-        //
-        //  Created by Catalyst CLI on \(DateFormatter.shortDateFormatter.string(from: Date())).
-        //
+    private func extractDeploymentTarget(_ configuration: MicroAppConfiguration) -> String? {
+        // Extract iOS deployment target from platform configuration
+        guard let platforms = configuration.platforms else {
+            return "15.0" // Default fallback
+        }
 
-        import SwiftUI
-        import \(configuration.featureName)
-
-        struct ContentView: View {
-            var body: some View {
-                NavigationView {
-                    \(configuration.featureName)View()
-                        .navigationTitle("\(configuration.featureName)")
+        // Find the first iOS platform and extract its version
+        for platform in platforms {
+            switch platform {
+            case .iOS(let version):
+                switch version {
+                case .v12: return "12.0"
+                case .v13: return "13.0"
+                case .v14: return "14.0"
+                case .v15: return "15.0"
+                case .v16: return "16.0"
+                case .v17: return "17.0"
                 }
+            default:
+                continue // Skip non-iOS platforms
             }
         }
 
-        #if DEBUG
-        struct ContentView_Previews: PreviewProvider {
-            static var previews: some View {
-                ContentView()
-            }
-        }
-        #endif
-        """
-
-        let contentViewPath = path + "ContentView.swift"
-        try contentViewContent.write(to: contentViewPath.url, atomically: true, encoding: .utf8)
+        return "15.0" // Default fallback if no iOS platform found
     }
 
-    private func generateDependencyContainer(_ configuration: MicroAppConfiguration, at path: Path) throws {
-        let containerContent = """
-        //
-        //  DependencyContainer.swift
-        //  \(configuration.featureName)App
-        //
-        //  Created by Catalyst CLI on \(DateFormatter.shortDateFormatter.string(from: Date())).
-        //
+    // MARK: - Legacy Methods (Removed - Now using templates)
 
-        import Foundation
-        import \(configuration.featureName)
-
-        /// Dependency injection container for the MicroApp
-        class DependencyContainer {
-            static let shared = DependencyContainer()
-
-            private init() {}
-
-            /// Configure dependencies for the \(configuration.featureName) module
-            func configure() {
-                // Configure any services, repositories, or dependencies
-                // that your \(configuration.featureName) module requires
-
-                // Example:
-                // ServiceLocator.register(SomeService.self, instance: SomeServiceImpl())
-            }
-        }
-        """
-
-        let containerPath = path + "DependencyContainer.swift"
-        try containerContent.write(to: containerPath.url, atomically: true, encoding: .utf8)
-    }
-
-    private func generateInfoPlist(_ configuration: MicroAppConfiguration, at path: Path) throws {
-        let infoPlistContent = """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleDevelopmentRegion</key>
-            <string>$(DEVELOPMENT_LANGUAGE)</string>
-            <key>CFBundleDisplayName</key>
-            <string>\(configuration.featureName)</string>
-            <key>CFBundleExecutable</key>
-            <string>$(EXECUTABLE_NAME)</string>
-            <key>CFBundleIdentifier</key>
-            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-            <key>CFBundleInfoDictionaryVersion</key>
-            <string>6.0</string>
-            <key>CFBundleName</key>
-            <string>$(PRODUCT_NAME)</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleShortVersionString</key>
-            <string>1.0</string>
-            <key>CFBundleVersion</key>
-            <string>1</string>
-            <key>LSRequiresIPhoneOS</key>
-            <true/>
-            <key>UIApplicationSceneManifest</key>
-            <dict>
-                <key>UIApplicationSupportsMultipleScenes</key>
-                <false/>
-                <key>UISceneConfigurations</key>
-                <dict>
-                    <key>UIWindowSceneSessionRoleApplication</key>
-                    <array>
-                        <dict>
-                            <key>UISceneConfigurationName</key>
-                            <string>Default Configuration</string>
-                            <key>UISceneDelegateClassName</key>
-                            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-                        </dict>
-                    </array>
-                </dict>
-            </dict>
-            <key>UILaunchScreen</key>
-            <dict/>
-            <key>UIRequiredDeviceCapabilities</key>
-            <array>
-                <string>armv7</string>
-            </array>
-            <key>UISupportedInterfaceOrientations</key>
-            <array>
-                <string>UIInterfaceOrientationPortrait</string>
-            </array>
-            <key>UISupportedInterfaceOrientations~ipad</key>
-            <array>
-                <string>UIInterfaceOrientationPortrait</string>
-                <string>UIInterfaceOrientationLandscapeLeft</string>
-                <string>UIInterfaceOrientationLandscapeRight</string>
-                <string>UIInterfaceOrientationPortraitUpsideDown</string>
-            </array>
-        </dict>
-        </plist>
-        """
-
-        let infoPlistPath = path + "Info.plist"
-        try infoPlistContent.write(to: infoPlistPath.url, atomically: true, encoding: .utf8)
-    }
 
     // MARK: - Assets and Resources
 
@@ -494,6 +284,74 @@ public class MicroAppGenerator {
         try launchScreenContent.write(to: launchScreenPath.url, atomically: true, encoding: .utf8)
     }
 
+    private func generateInfoPlist(_ configuration: MicroAppConfiguration, at path: Path) throws {
+        let infoPlistContent = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>$(DEVELOPMENT_LANGUAGE)</string>
+            <key>CFBundleDisplayName</key>
+            <string>\(configuration.featureName)</string>
+            <key>CFBundleExecutable</key>
+            <string>$(EXECUTABLE_NAME)</string>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>$(PRODUCT_NAME)</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSRequiresIPhoneOS</key>
+            <true/>
+            <key>UIApplicationSceneManifest</key>
+            <dict>
+                <key>UIApplicationSupportsMultipleScenes</key>
+                <false/>
+                <key>UISceneConfigurations</key>
+                <dict>
+                    <key>UIWindowSceneSessionRoleApplication</key>
+                    <array>
+                        <dict>
+                            <key>UISceneConfigurationName</key>
+                            <string>Default Configuration</string>
+                            <key>UISceneDelegateClassName</key>
+                            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+                        </dict>
+                    </array>
+                </dict>
+            </dict>
+            <key>UILaunchScreen</key>
+            <dict/>
+            <key>UIRequiredDeviceCapabilities</key>
+            <array>
+                <string>armv7</string>
+            </array>
+            <key>UISupportedInterfaceOrientations</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+            </array>
+            <key>UISupportedInterfaceOrientations~ipad</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+                <string>UIInterfaceOrientationLandscapeLeft</string>
+                <string>UIInterfaceOrientationLandscapeRight</string>
+                <string>UIInterfaceOrientationPortraitUpsideDown</string>
+            </array>
+        </dict>
+        </plist>
+        """
+
+        let infoPlistPath = path + "Info.plist"
+        try infoPlistContent.write(to: infoPlistPath.url, atomically: true, encoding: .utf8)
+    }
+
     // MARK: - Xcode Project Generation
 
     private func generateXcodeProject(at path: Path) throws {
@@ -556,6 +414,7 @@ public struct MicroAppConfiguration {
     public let bundleIdentifier: String?
     public let author: String?
     public let organizationName: String?
+    public let platforms: [Platform]?
     public let isLocalPackage: Bool
     public let addToWorkspace: Bool
 
@@ -565,6 +424,7 @@ public struct MicroAppConfiguration {
         bundleIdentifier: String? = nil,
         author: String? = nil,
         organizationName: String? = nil,
+        platforms: [Platform]? = nil,
         isLocalPackage: Bool = false,
         addToWorkspace: Bool = false
     ) {
@@ -573,6 +433,7 @@ public struct MicroAppConfiguration {
         self.bundleIdentifier = bundleIdentifier
         self.author = author
         self.organizationName = organizationName
+        self.platforms = platforms
         self.isLocalPackage = isLocalPackage
         self.addToWorkspace = addToWorkspace
     }

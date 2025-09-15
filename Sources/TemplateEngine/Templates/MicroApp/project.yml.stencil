@@ -11,12 +11,14 @@ targets:
   {{ModuleName}}App:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: {% if DeploymentTarget %}"{{DeploymentTarget}}"{% else %}"15.0"{% endif %}
     sources:
       - {{ModuleName}}App
     dependencies:
-      - package: {{ModuleName}}Interface
-      - package: {{ModuleName}}
+      - product: {{ModuleName}}Interface
+        package: {{ModuleName}}
+      - product: {{ModuleName}}
+        package: {{ModuleName}}
     info:
       path: Info.plist
       properties:

@@ -402,6 +402,7 @@ public struct NewCommand: AsyncParsableCommand {
             bundleIdentifier: configuration.bundleIdentifier,
             author: configuration.author,
             organizationName: configuration.organizationName,
+            platforms: configuration.platforms,
             isLocalPackage: true,  // New parameter to indicate local package reference
             addToWorkspace: false  // We handle workspace integration manually in NewCommand
         )
@@ -447,6 +448,7 @@ public struct NewCommand: AsyncParsableCommand {
             bundleIdentifier: nil, // This will be generated based on app name
             author: configuration.author,
             organizationName: configuration.organizationName,
+            platforms: configuration.platforms,
             addToWorkspace: true  // Standalone MicroApps should be added to workspace
         )
 
