@@ -6,6 +6,10 @@ options:
 packages:
   {{ModuleName}}:
     path: ../{{ModuleName}}
+{% for dependency in LocalDependencies %}
+  {{dependency.name}}:
+    path: "{{dependency.path}}"
+{% endfor %}
 
 targets:
   {{ModuleName}}App:
@@ -19,6 +23,12 @@ targets:
         package: {{ModuleName}}
       - product: {{ModuleName}}
         package: {{ModuleName}}
+{% for dependency in LocalDependencies %}
+{% for product in dependency.products %}
+      - product: {{product}}
+        package: {{dependency.name}}
+{% endfor %}
+{% endfor %}
     info:
       path: Info.plist
       properties:

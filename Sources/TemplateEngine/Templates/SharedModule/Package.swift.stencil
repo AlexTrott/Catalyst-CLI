@@ -12,8 +12,10 @@ let package = Package(
         .library(name: "{{ModuleName}}Interface", targets: ["{{ModuleName}}Interface"]),
         .library(name: "{{ModuleName}}", targets: ["{{ModuleName}}"])
     ],
-    dependencies: [{% for dependency in Dependencies %}
-        .package(url: "{{dependency.url}}", from: "{{dependency.version|default:'1.0.0'}}"){% if not forloop.last %},{% endif %}{% endfor %}
+    dependencies: [
+{% for dependency in PackageDependencies %}
+        {{dependency}}{% if not forloop.last %},{% endif %}
+{% endfor %}
     ],
     targets: [
         .target(
@@ -22,10 +24,9 @@ let package = Package(
         .target(
             name: "{{ModuleName}}",
             dependencies: [
-                {% for dependency in Dependencies %}
-                "{{dependency.name}}",
-                {% endfor %}
-                "{{ModuleName}}Interface" 
+{% for dependency in MainTargetDependencies %}
+                {{dependency}}{% if not forloop.last %},{% endif %}
+{% endfor %}
             ]
         ),
         .testTarget(

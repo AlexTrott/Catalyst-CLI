@@ -102,6 +102,8 @@ let package = Package(
             dependencies: [
                 "TemplateEngine",
                 "AppIconGenerator",
+                "Utilities",
+                "PackageGenerator",
                 .product(name: "PathKit", package: "PathKit"),
                 .product(name: "Files", package: "Files"),
                 .product(name: "Yams", package: "Yams"),
@@ -121,6 +123,7 @@ let package = Package(
             name: "PackageGenerator",
             dependencies: [
                 "TemplateEngine",
+                "Utilities",
                 .product(name: "PathKit", package: "PathKit"),
                 .product(name: "Files", package: "Files")
             ]
@@ -142,7 +145,8 @@ let package = Package(
             dependencies: [
                 .product(name: "Rainbow", package: "Rainbow"),
                 .product(name: "SwiftShell", package: "SwiftShell"),
-                .product(name: "Files", package: "Files")
+                .product(name: "Files", package: "Files"),
+                .product(name: "PathKit", package: "PathKit")
             ]
         ),
 

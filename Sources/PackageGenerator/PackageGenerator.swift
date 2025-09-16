@@ -1,6 +1,7 @@
 import Foundation
 import TemplateEngine
 import PathKit
+import Utilities
 
 // Import the types we need from CatalystCore
 public enum ModuleType: String, CaseIterable {
@@ -220,6 +221,7 @@ public struct ModuleConfiguration {
     public let platforms: [Platform]
     public let dependencies: [Dependency]
     public let customTemplateVariables: [String: String]
+    public let localDependencies: [LocalPackageDependency]
 
     public init(
         name: String,
@@ -231,7 +233,8 @@ public struct ModuleConfiguration {
         swiftVersion: String = "5.9",
         platforms: [Platform] = [.iOS(.v16)],
         dependencies: [Dependency] = [],
-        customTemplateVariables: [String: String] = [:]
+        customTemplateVariables: [String: String] = [:],
+        localDependencies: [LocalPackageDependency] = []
     ) {
         self.name = name
         self.type = type
@@ -243,6 +246,7 @@ public struct ModuleConfiguration {
         self.platforms = platforms
         self.dependencies = dependencies
         self.customTemplateVariables = customTemplateVariables
+        self.localDependencies = localDependencies
     }
 
     public var templateContext: [String: Any] {
@@ -257,6 +261,45 @@ public struct ModuleConfiguration {
             "Date": ISO8601DateFormatter().string(from: Date()),
             "Year": Calendar.current.component(.year, from: Date())
         ]
+
+        let packagePath = (Path(path) + name).absolute()
+        let localDependencyContext: [[String: Any]] = localDependencies.map { dependency in
+            let dependencyPath = Path(dependency.packagePath).absolute()
+            let relative = relativePath(from: packagePath, to: dependencyPath)
+            return [
+                "name": dependency.packageName,
+                "path": relative,
+                "products": dependency.productNames
+            ]
+        }
+        context["LocalDependencies"] = localDependencyContext
+
+        let packageDependencies = localDependencies.map { dependency -> String in
+            let dependencyPath = Path(dependency.packagePath).absolute()
+            let relative = relativePath(from: packagePath, to: dependencyPath)
+            return ".package(name: \"\(dependency.packageName)\", path: \"\(relative)\")"
+        } + dependencies.compactMap { dependency in
+            guard let url = dependency.url, !url.isEmpty else { return nil }
+            let version = dependency.version ?? "1.0.0"
+            return ".package(url: \"\(url)\", from: \"\(version)\")"
+        }
+
+        context["PackageDependencies"] = packageDependencies
+
+        var mainTargetDependencies: [String] = []
+        for dependency in localDependencies {
+            for product in dependency.productNames {
+                mainTargetDependencies.append(".product(name: \"\(product)\", package: \"\(dependency.packageName)\")")
+            }
+        }
+
+        for dependency in dependencies {
+            guard !dependency.name.isEmpty else { continue }
+            mainTargetDependencies.append("\"\(dependency.name)\"")
+        }
+
+        mainTargetDependencies.append("\"\(name)Interface\"")
+        context["MainTargetDependencies"] = mainTargetDependencies
 
         if let author = author {
             context["Author"] = author
@@ -273,6 +316,22 @@ public struct ModuleConfiguration {
         context.merge(customTemplateVariables) { (_, new) in new }
 
         return context
+    }
+
+    public func withLocalDependencies(_ dependencies: [LocalPackageDependency]) -> ModuleConfiguration {
+        ModuleConfiguration(
+            name: name,
+            type: type,
+            path: path,
+            author: author,
+            organizationName: organizationName,
+            bundleIdentifier: bundleIdentifier,
+            swiftVersion: swiftVersion,
+            platforms: platforms,
+            dependencies: self.dependencies,
+            customTemplateVariables: customTemplateVariables,
+            localDependencies: dependencies
+        )
     }
 }
 

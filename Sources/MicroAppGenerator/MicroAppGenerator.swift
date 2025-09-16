@@ -8,6 +8,7 @@ import ProjectSpec
 import WorkspaceManager
 import Utilities
 import AppIconGenerator
+import PackageGenerator
 import enum PackageGenerator.Platform
 
 /// Generates complete iOS MicroApps for isolated feature testing.
@@ -85,7 +86,7 @@ public class MicroAppGenerator {
 
     private func generateFromTemplate(_ configuration: MicroAppConfiguration, at path: Path) throws {
         // Create template variables for MicroApp generation
-        let templateVariables = createTemplateVariables(configuration)
+        let templateVariables = createTemplateVariables(configuration, outputPath: path)
 
         // Generate MicroApp from templates using the TemplateEngine
         try templateEngine.processTemplateDirectory(
@@ -95,7 +96,7 @@ public class MicroAppGenerator {
         )
     }
 
-    private func createTemplateVariables(_ configuration: MicroAppConfiguration) -> [String: Any] {
+    private func createTemplateVariables(_ configuration: MicroAppConfiguration, outputPath: Path) -> [String: Any] {
         let currentDate = Date()
         let isoFormatter = ISO8601DateFormatter()
         let yearFormatter = DateFormatter()
@@ -109,6 +110,22 @@ public class MicroAppGenerator {
             "Date": isoFormatter.string(from: currentDate),
             "Year": yearFormatter.string(from: currentDate)
         ]
+
+        let localDependencies = configuration.localDependencies.map { dependency -> [String: Any] in
+            let dependencyPath = Path(dependency.packagePath).absolute()
+            let relative = relativePath(from: outputPath.absolute(), to: dependencyPath)
+            var products = Set(dependency.availableProducts)
+            for product in dependency.productNames {
+                products.insert(product)
+            }
+            return [
+                "name": dependency.packageName,
+                "path": relative,
+                "products": Array(products).sorted()
+            ]
+        }
+
+        variables["LocalDependencies"] = localDependencies
 
         // Add optional configuration values
         if let author = configuration.author {
@@ -419,6 +436,7 @@ public struct MicroAppConfiguration {
     public let platforms: [Platform]?
     public let isLocalPackage: Bool
     public let addToWorkspace: Bool
+    public let localDependencies: [LocalPackageDependency]
 
     public init(
         featureName: String,
@@ -428,7 +446,8 @@ public struct MicroAppConfiguration {
         organizationName: String? = nil,
         platforms: [Platform]? = nil,
         isLocalPackage: Bool = false,
-        addToWorkspace: Bool = false
+        addToWorkspace: Bool = false,
+        localDependencies: [LocalPackageDependency] = []
     ) {
         self.featureName = featureName
         self.outputPath = outputPath
@@ -438,6 +457,7 @@ public struct MicroAppConfiguration {
         self.platforms = platforms
         self.isLocalPackage = isLocalPackage
         self.addToWorkspace = addToWorkspace
+        self.localDependencies = localDependencies
     }
 }
 

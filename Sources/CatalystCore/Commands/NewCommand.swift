@@ -121,7 +121,11 @@ public struct NewCommand: AsyncParsableCommand {
         try validateInputs(targetPath: targetPath)
 
         // Create module configuration
-        let configuration = try createModuleConfiguration(targetPath: targetPath)
+        var configuration = try createModuleConfiguration(targetPath: targetPath)
+
+        let dependencySelector = DependencySelector()
+        let selectedDependencies = dependencySelector.selectDependencies(for: configuration)
+        configuration = configuration.withLocalDependencies(selectedDependencies)
 
         if dryRun {
             try previewModuleCreation(configuration)
@@ -329,6 +333,17 @@ public struct NewCommand: AsyncParsableCommand {
             file.replacingOccurrences(of: "{{ModuleName}}", with: configuration.name)
         }
         Console.printList(testFiles)
+
+        if !configuration.localDependencies.isEmpty {
+            Console.newLine()
+            Console.print("Local dependencies:", type: .info)
+            let dependencyDescriptions = configuration.localDependencies.flatMap { dependency -> [String] in
+                dependency.productNames.map { product in
+                    "\(dependency.packageName) / \(product)"
+                }
+            }
+            Console.printList(dependencyDescriptions)
+        }
     }
 
     private func createModule(_ configuration: ModuleConfiguration) async throws {
@@ -389,7 +404,8 @@ public struct NewCommand: AsyncParsableCommand {
             swiftVersion: configuration.swiftVersion,
             platforms: configuration.platforms,
             dependencies: configuration.dependencies,
-            customTemplateVariables: configuration.customTemplateVariables
+            customTemplateVariables: configuration.customTemplateVariables,
+            localDependencies: configuration.localDependencies
         )
         try packageGenerator.generatePackage(featureConfiguration)
 
@@ -404,7 +420,8 @@ public struct NewCommand: AsyncParsableCommand {
             organizationName: configuration.organizationName,
             platforms: configuration.platforms,
             isLocalPackage: true,  // New parameter to indicate local package reference
-            addToWorkspace: false  // We handle workspace integration manually in NewCommand
+            addToWorkspace: false,  // We handle workspace integration manually in NewCommand
+            localDependencies: configuration.localDependencies
         )
 
         let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
@@ -449,7 +466,8 @@ public struct NewCommand: AsyncParsableCommand {
             author: configuration.author,
             organizationName: configuration.organizationName,
             platforms: configuration.platforms,
-            addToWorkspace: true  // Standalone MicroApps should be added to workspace
+            addToWorkspace: true,  // Standalone MicroApps should be added to workspace
+            localDependencies: configuration.localDependencies
         )
 
         let templateEngine = TemplateEngine()
