@@ -421,7 +421,8 @@ public struct NewCommand: AsyncParsableCommand {
             platforms: configuration.platforms,
             isLocalPackage: true,  // New parameter to indicate local package reference
             addToWorkspace: false,  // We handle workspace integration manually in NewCommand
-            localDependencies: configuration.localDependencies
+            localDependencies: configuration.localDependencies,
+            swiftVersion: configuration.swiftVersion
         )
 
         let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
@@ -467,7 +468,8 @@ public struct NewCommand: AsyncParsableCommand {
             organizationName: configuration.organizationName,
             platforms: configuration.platforms,
             addToWorkspace: true,  // Standalone MicroApps should be added to workspace
-            localDependencies: configuration.localDependencies
+            localDependencies: configuration.localDependencies,
+            swiftVersion: configuration.swiftVersion
         )
 
         let templateEngine = TemplateEngine()

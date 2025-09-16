@@ -89,7 +89,8 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
             outputPath: outputPath,
             bundleIdentifier: config.bundleIdentifierPrefix.map { "\($0).\(featureName.lowercased())app" },
             author: config.author,
-            organizationName: config.organizationName
+            organizationName: config.organizationName,
+            swiftVersion: config.swiftVersion
         )
 
         if dryRun {

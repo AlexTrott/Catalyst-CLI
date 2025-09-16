@@ -2,6 +2,14 @@ name: {{ModuleName}}App
 
 options:
   bundleIdPrefix: {% if BundleIdentifier %}{{BundleIdentifier}}{% else %}com.catalyst.{{ModuleName|lowercase}}app{% endif %}
+  createIntermediateGroups: true
+  indentWidth: 4
+  tabWidth: 4
+  developmentLanguage: en
+
+configs:
+  Debug: debug
+  Release: release
 
 packages:
   {{ModuleName}}:
@@ -15,10 +23,12 @@ targets:
   {{ModuleName}}App:
     type: application
     platform: iOS
+    supportedDestinations: [iOS]
     deploymentTarget: {% if DeploymentTarget %}"{{DeploymentTarget}}"{% else %}"15.0"{% endif %}
     sources:
       - {{ModuleName}}App
       - Assets.xcassets
+      - LaunchScreen.storyboard
     dependencies:
       - product: {{ModuleName}}Interface
         package: {{ModuleName}}
@@ -42,6 +52,9 @@ targets:
           UIImageName: ""
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortraitUpsideDown
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -50,11 +63,44 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: {% if BundleIdentifier %}{{BundleIdentifier}}{% else %}com.catalyst.{{ModuleName|lowercase}}app{% endif %}
       DEVELOPMENT_TEAM: ""  # Set this to your team ID
+      CODE_SIGN_STYLE: Automatic
+      SWIFT_VERSION: {% if SwiftVersion %}"{{SwiftVersion}}"{% else %}"6.0"{% endif %}
+
+  {{ModuleName}}AppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    supportedDestinations: [iOS]
+    deploymentTarget: {% if DeploymentTarget %}"{{DeploymentTarget}}"{% else %}"15.0"{% endif %}
+    sources:
+      - {{ModuleName}}AppUITests
+    dependencies:
+      - target: {{ModuleName}}App
+    settings:
+      SWIFT_VERSION: {% if SwiftVersion %}"{{SwiftVersion}}"{% else %}"6.0"{% endif %}
+      TEST_TARGET_NAME: {{ModuleName}}App
 
 schemes:
   {{ModuleName}}App:
     build:
       targets:
         {{ModuleName}}App: all
+        {{ModuleName}}AppUITests: [test]
     run:
       config: Debug
+      environmentVariables:
+        OS_ACTIVITY_MODE: disable  # Reduce console noise
+    test:
+      config: Debug
+      gatherCoverageData: true
+      coverageTargets:
+        - {{ModuleName}}App
+      targets:
+        - name: {{ModuleName}}AppUITests
+          parallelizable: false
+          randomExecutionOrder: false
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

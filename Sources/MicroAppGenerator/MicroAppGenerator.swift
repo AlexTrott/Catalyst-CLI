@@ -144,6 +144,10 @@ public class MicroAppGenerator {
             variables["DeploymentTarget"] = deploymentTarget
         }
 
+        if let swiftVersion = configuration.swiftVersion {
+            variables["SwiftVersion"] = swiftVersion
+        }
+
         return variables
     }
 
@@ -437,6 +441,7 @@ public struct MicroAppConfiguration {
     public let isLocalPackage: Bool
     public let addToWorkspace: Bool
     public let localDependencies: [LocalPackageDependency]
+    public let swiftVersion: String?
 
     public init(
         featureName: String,
@@ -447,7 +452,8 @@ public struct MicroAppConfiguration {
         platforms: [Platform]? = nil,
         isLocalPackage: Bool = false,
         addToWorkspace: Bool = false,
-        localDependencies: [LocalPackageDependency] = []
+        localDependencies: [LocalPackageDependency] = [],
+        swiftVersion: String? = nil
     ) {
         self.featureName = featureName
         self.outputPath = outputPath
@@ -458,6 +464,7 @@ public struct MicroAppConfiguration {
         self.isLocalPackage = isLocalPackage
         self.addToWorkspace = addToWorkspace
         self.localDependencies = localDependencies
+        self.swiftVersion = swiftVersion
     }
 }
 
