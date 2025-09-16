@@ -228,11 +228,13 @@ public class BrewManager {
 
     /// Check network connectivity
     private func checkNetworkConnectivity() async throws {
+        guard Shell.exists("curl") else { return }
+
         do {
-            let _ = try Shell.run("ping -c 1 8.8.8.8", timeout: 10, silent: true)
-            // If we get here, network is available
+            let probe = "curl -Is https://github.com --max-time 5"
+            _ = try Shell.run(probe, timeout: 10, silent: true)
         } catch {
-            throw BrewError.networkError
+            Console.print("Unable to verify network connectivity (\(error.localizedDescription)). Continuing and letting Homebrew surface any issues.", type: .warning)
         }
     }
 
