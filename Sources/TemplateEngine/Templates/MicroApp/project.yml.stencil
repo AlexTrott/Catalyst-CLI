@@ -18,6 +18,7 @@ targets:
     deploymentTarget: {% if DeploymentTarget %}"{{DeploymentTarget}}"{% else %}"15.0"{% endif %}
     sources:
       - {{ModuleName}}App
+      - Assets.xcassets
     dependencies:
       - product: {{ModuleName}}Interface
         package: {{ModuleName}}
