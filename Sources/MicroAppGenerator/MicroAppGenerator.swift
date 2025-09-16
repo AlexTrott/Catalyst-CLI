@@ -75,6 +75,10 @@ public class MicroAppGenerator {
 
         // Generate Xcode project using XcodeGen (if available)
         try generateXcodeProject(at: microAppPath)
+
+        if configuration.addToWorkspace {
+            try addToWorkspace(microAppPath: microAppPath, configuration: configuration)
+        }
     }
 
     // MARK: - Template-based Generation
@@ -93,9 +97,7 @@ public class MicroAppGenerator {
 
     private func createTemplateVariables(_ configuration: MicroAppConfiguration) -> [String: Any] {
         let currentDate = Date()
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MM/dd/yyyy"
-
+        let isoFormatter = ISO8601DateFormatter()
         let yearFormatter = DateFormatter()
         yearFormatter.dateFormat = "yyyy"
 
@@ -104,7 +106,7 @@ public class MicroAppGenerator {
 
         var variables: [String: Any] = [
             "ModuleName": configuration.featureName,
-            "Date": currentDate,
+            "Date": isoFormatter.string(from: currentDate),
             "Year": yearFormatter.string(from: currentDate)
         ]
 
@@ -470,4 +472,3 @@ private extension DateFormatter {
         return formatter
     }()
 }
-
