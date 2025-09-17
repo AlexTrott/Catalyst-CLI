@@ -84,7 +84,7 @@ public struct ListTemplatesCommand: ParsableCommand {
 
     private func displayDetailedTemplates(_ templates: [(name: String, path: String, type: String)]) {
         for (index, template) in templates.enumerated() {
-            Console.print(String(repeating: "─", count: 50))
+            Console.printDivider(length: 50)
             Console.print("\(index + 1). \(template.name)", type: .info)
 
             let typeIcon = template.type == "directory" ? "📁" : "📄"

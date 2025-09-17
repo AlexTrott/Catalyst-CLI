@@ -62,8 +62,8 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
         Console.newLine()
 
         // Ask for confirmation to continue with deprecated command
-        print("Continue with deprecated command? (y/N): ", terminator: "")
-        if let input = readLine(), input.lowercased() != "y" && input.lowercased() != "yes" {
+        let shouldContinue = Console.confirm("Continue with deprecated command?", defaultAnswer: false)
+        if !shouldContinue {
             Console.print("Operation cancelled. Use 'catalyst new microapp \(featureName)' for the new approach.", type: .info)
             return
         }

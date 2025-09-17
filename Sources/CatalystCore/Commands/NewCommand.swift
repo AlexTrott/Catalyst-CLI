@@ -204,9 +204,8 @@ public struct NewCommand: AsyncParsableCommand {
         if moduleTypeEnum == .shared && !moduleName.hasSuffix("Kit") {
             Console.newLine()
             Console.print("💡 Recommendation: Consider using '\(moduleName)Kit' for consistency with shared module naming conventions.", type: .warning)
-            Console.print("Would you like to rename it to '\(moduleName)Kit'? (y/n): ", type: .info)
 
-            if let response = readLine()?.lowercased(), response == "y" || response == "yes" {
+            if Console.confirm("Rename to '\(moduleName)Kit'?", defaultAnswer: true) {
                 moduleName = "\(moduleName)Kit"
                 Console.print("✓ Module renamed to: \(moduleName)", type: .success)
             }

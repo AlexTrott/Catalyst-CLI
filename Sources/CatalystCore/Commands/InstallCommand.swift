@@ -452,16 +452,16 @@ public struct PackagesCommand: AsyncParsableCommand {
         // Get user confirmation
         if !force && (!toInstall.isEmpty || !toUpdate.isEmpty) {
             Console.newLine()
-            var message = "Proceed with package operations?"
+            Console.print("Planned actions:", type: .info)
             if !toInstall.isEmpty {
-                message += "\n  Install: \(toInstall.map { $0.name }.joined(separator: ", "))"
+                Console.print("  Install: \(toInstall.map { $0.name }.joined(separator: ", "))", type: .detail)
             }
             if !toUpdate.isEmpty {
-                message += "\n  Update: \(toUpdate.map { $0.name }.joined(separator: ", "))"
+                Console.print("  Update: \(toUpdate.map { $0.name }.joined(separator: ", "))", type: .detail)
             }
 
-            Console.print("\(message) (y/N): ", type: .info)
-            if let input = readLine(), input.lowercased() != "y" && input.lowercased() != "yes" {
+            let shouldContinue = Console.confirm("Proceed with package operations?", defaultAnswer: false)
+            if !shouldContinue {
                 Console.print("Operation cancelled", type: .info)
                 return
             }
@@ -470,33 +470,47 @@ public struct PackagesCommand: AsyncParsableCommand {
         // Install missing packages
         if !toInstall.isEmpty {
             Console.printStep(2, total: 3, message: "Installing packages...")
+            let installProgress = verbose ? nil : Console.progress(
+                total: toInstall.count,
+                message: "Installing packages"
+            )
             for package in toInstall {
                 do {
                     if verbose {
                         Console.print("Installing \(package.name)...", type: .progress)
                     }
                     try await brewManager.installPackage(package.name)
+                    installProgress?.advance(message: package.name)
                     Console.print("✅ Installed \(package.name)", type: .success)
                 } catch {
+                    installProgress?.advance(message: package.name)
                     Console.print("❌ Failed to install \(package.name): \(error.localizedDescription)", type: .error)
                 }
             }
+            installProgress?.finish()
         }
 
         // Update existing packages
         if !toUpdate.isEmpty {
             Console.printStep(3, total: 3, message: "Updating packages...")
+            let updateProgress = verbose ? nil : Console.progress(
+                total: toUpdate.count,
+                message: "Updating packages"
+            )
             for package in toUpdate {
                 do {
                     if verbose {
                         Console.print("Updating \(package.name)...", type: .progress)
                     }
                     try await brewManager.updatePackage(package.name)
+                    updateProgress?.advance(message: package.name)
                     Console.print("✅ Updated \(package.name)", type: .success)
                 } catch {
+                    updateProgress?.advance(message: package.name)
                     Console.print("❌ Failed to update \(package.name): \(error.localizedDescription)", type: .error)
                 }
             }
+            updateProgress?.finish()
         }
 
         Console.newLine()
@@ -530,8 +544,12 @@ public struct PackagesCommand: AsyncParsableCommand {
             return
         }
 
-        Console.print("Homebrew is required to install packages. Install now? (y/N): ", type: .info)
-        if let input = readLine(), input.lowercased() == "y" || input.lowercased() == "yes" {
+        let shouldInstall = Console.confirm(
+            "Homebrew is required to install packages. Install now?",
+            defaultAnswer: false
+        )
+
+        if shouldInstall {
             Console.print("Installing Homebrew... This may take a few minutes.", type: .progress)
 
             do {

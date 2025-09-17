@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import AppKit
+import Utilities
 
 /// Error types for app icon generation
 public enum AppIconError: LocalizedError {
@@ -417,7 +418,7 @@ public class AppIconGenerator {
         // Create the modern single-size Contents.json
         try createSingleSizeContentsJSON(at: path)
 
-        print("🐷 Generated app icon with pig + \(randomEmoji) combination")
+        Console.print("🐷 Generated app icon with pig + \(randomEmoji) combination", type: .success)
     }
 
     /// Fetch pig emoji image from the API

@@ -489,7 +489,7 @@ public struct DoctorCommand: AsyncParsableCommand {
 
         // Display errors first
         if let errorChecks = groupedChecks[.error] {
-            displayCheckGroup(errorChecks, title: "Critical Issues", color: .error)
+            displayCheckGroup(errorChecks, title: "Critical Requirements", color: .error)
         }
 
         // Then warnings

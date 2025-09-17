@@ -65,63 +65,46 @@ Input validation utilities:
 ### Colored Output
 
 ```swift
-Console.shared.success("✅ Operation completed successfully")
-Console.shared.error("❌ An error occurred")
-Console.shared.warning("⚠️ Warning: Check configuration")
-Console.shared.info("ℹ️ Processing files...")
+Console.print("Operation completed successfully", type: .success)
+Console.print("An error occurred", type: .error)
+Console.print("Warning: Check configuration", type: .warning)
+Console.print("Processing files...", type: .info)
 ```
 
 ### Progress Indicators
 
 ```swift
-// Spinner for long operations
-Console.shared.startSpinner(message: "Building project...")
-// ... perform operation ...
-Console.shared.stopSpinner(success: true)
+let progress = Console.progress(total: 3, message: "Generating modules")
+progress.advance(message: "Scaffolding sources")
+progress.advance(message: "Creating tests")
+progress.finish(message: "Generation complete")
 
-// Progress bar for known quantities
-Console.shared.showProgressBar(current: 50, total: 100)
+// Legacy spinner for longer running work
+Console.printSpinner(message: "Building project", duration: 1.5)
 ```
 
 ### Interactive Prompts
 
 ```swift
-// Yes/No confirmation
-let proceed = Console.shared.confirm("Continue with operation?")
+// Yes/No confirmation with default
+let proceed = Console.confirm("Continue with operation?", defaultAnswer: true)
 
-// Text input
-let name = Console.shared.prompt("Enter module name:")
+// Text input with default value
+let name = Console.prompt("Enter module name", defaultValue: "MyFeature")
 
 // Choice selection
-let option = Console.shared.select(
-    "Choose template:",
+let option = Console.select(
+    "Choose template",
     options: ["Core", "Feature", "Custom"]
 )
 ```
 
-### Formatted Tables
+### Styled Sections
 
 ```swift
-Console.shared.printTable(
-    headers: ["Module", "Type", "Path"],
-    rows: [
-        ["NetworkingCore", "Core", "./Core/NetworkingCore"],
-        ["AuthFeature", "Feature", "./Features/AuthFeature"]
-    ]
-)
-```
-
-### ASCII Art
-
-```swift
-// Print stylized banner
-Console.shared.printBanner("CATALYST")
-
-// Print separator
-Console.shared.printSeparator()
-
-// Print box around text
-Console.shared.printBox("Installation Complete!")
+Console.printHeader("Workspace Contents")
+Console.printDivider()
+Console.printBoxed("Installation Complete!", style: .double)
 ```
 
 ## Shell Operations

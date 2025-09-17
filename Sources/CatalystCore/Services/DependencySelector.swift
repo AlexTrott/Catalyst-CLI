@@ -42,9 +42,13 @@ final class DependencySelector {
         }
 
         Console.newLine()
-        Console.print("Select dependencies to add (comma-separated numbers, press Enter to skip): ", type: .info)
+        let input = Console.prompt(
+            "Select dependencies to add (comma-separated numbers, press Enter to skip)",
+            allowEmpty: true,
+            style: .selection
+        ) ?? ""
 
-        guard let input = readLine(), !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Console.print("No additional dependencies selected", type: .detail)
             return []
         }

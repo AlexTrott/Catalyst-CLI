@@ -176,7 +176,7 @@ public struct ListCommand: AsyncParsableCommand {
 
     private func displayDetailedView(_ packages: [WorkspacePackage], workspacePath: String) async {
         for (index, package) in packages.enumerated() {
-            Console.print("─" * 50)
+            Console.printDivider(length: 50)
             Console.print("\(index + 1). \(package.name)", type: .info)
 
             let typeIcon = iconFor(packageType: package.type)
@@ -295,12 +295,5 @@ public struct ListCommand: AsyncParsableCommand {
         } catch {
             return []
         }
-    }
-}
-
-// String extension for repeating characters
-private extension String {
-    static func *(lhs: String, rhs: Int) -> String {
-        return String(repeating: lhs, count: rhs)
     }
 }

@@ -219,10 +219,8 @@ public struct ResetCommand: ParsableCommand {
         if FileManager.default.fileExists(atPath: path) {
             if !force {
                 Console.print("This will reset \(name) configuration at: \(path)", type: .warning)
-                Console.print("Are you sure? (y/N)", type: .info)
-
-                let response = readLine() ?? ""
-                if !["y", "yes", "Y", "YES"].contains(response) {
+                let confirmed = Console.confirm("Proceed with reset?", defaultAnswer: false)
+                if !confirmed {
                     Console.print("Reset cancelled")
                     return
                 }

@@ -12,6 +12,12 @@ public enum Console {
         case detail
     }
 
+    public enum PromptStyle {
+        case yesNo
+        case text
+        case selection
+    }
+
     public static func printBanner(withVersion version: String = "1.0.0") {
         let banner = """
         ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -24,7 +30,7 @@ public enum Console {
         ║    ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝   ╚═╝           ║
         ║                                                                              ║
         ║                    🚀 Swift CLI for iOS Module Generation                    ║
-        ║                            Version \(version.padding(toLength: 6, withPad: " ", startingAt: 0))                                  ║
+        ║                            Version \(version.padding(toLength: 6, withPad: " ", startingAt: 0))                                    ║
         ║                                                                              ║
         ╚══════════════════════════════════════════════════════════════════════════════╝
         """
@@ -150,6 +156,11 @@ public enum Console {
         }
     }
 
+    public static func printDivider(character: Character = "─", length: Int = 60) {
+        let line = String(repeating: character, count: length)
+        Swift.print(line.lightBlack)
+    }
+
     public static func printCodeBlock(_ code: String) {
         Swift.print("```".lightBlack)
         Swift.print(code)
@@ -158,6 +169,157 @@ public enum Console {
 
     public static func printDryRun(_ action: String) {
         Swift.print("[DRY RUN] ".yellow.bold + action.yellow)
+    }
+
+    public static func prompt(
+        _ message: String,
+        defaultValue: String? = nil,
+        allowEmpty: Bool = false,
+        style: PromptStyle = .text
+    ) -> String? {
+        var attempts = 0
+        let promptMessage: String
+
+        switch style {
+        case .text:
+            if let defaultValue {
+                promptMessage = "✏️  \(message) [\(defaultValue)]: "
+            } else {
+                promptMessage = "✏️  \(message): "
+            }
+        case .yesNo:
+            promptMessage = message
+        case .selection:
+            promptMessage = "➤ \(message): "
+        }
+
+        while attempts < 3 {
+            Swift.print(promptMessage.cyan, terminator: "")
+            fflush(stdout)
+
+            guard let input = readLine() else {
+                attempts += 1
+                continue
+            }
+
+            let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if trimmed.isEmpty {
+                if let defaultValue {
+                    return defaultValue
+                }
+
+                if allowEmpty {
+                    return ""
+                }
+
+                attempts += 1
+                Console.print("Please enter a value.", type: .warning)
+                continue
+            }
+
+            return trimmed
+        }
+
+        return defaultValue
+    }
+
+    public static func confirm(
+        _ message: String,
+        defaultAnswer: Bool? = false,
+        attempts: Int = 3
+    ) -> Bool {
+        var remaining = attempts
+        let defaultHint: String
+
+        switch defaultAnswer {
+        case true?:
+            defaultHint = "[Y/n]"
+        case false?:
+            defaultHint = "[y/N]"
+        case nil:
+            defaultHint = "[y/n]"
+        }
+
+        while remaining > 0 {
+            Swift.print("❓ \(message) \(defaultHint) ".cyan, terminator: "")
+            fflush(stdout)
+
+            guard let input = readLine() else {
+                remaining -= 1
+                continue
+            }
+
+            let normalized = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+            if normalized.isEmpty, let defaultAnswer {
+                return defaultAnswer
+            }
+
+            if ["y", "yes"].contains(normalized) {
+                return true
+            }
+
+            if ["n", "no"].contains(normalized) {
+                return false
+            }
+
+            remaining -= 1
+            Console.print("Please respond with 'y' or 'n'.", type: .warning)
+        }
+
+        return defaultAnswer ?? false
+    }
+
+    public static func select<T>(
+        _ message: String,
+        options: [T],
+        optionDescription: (T) -> String = { "\($0)" },
+        defaultIndex: Int? = nil
+    ) -> T? {
+        guard !options.isEmpty else { return nil }
+
+        Console.print(message, type: .info)
+        for (index, option) in options.enumerated() {
+            Console.print("  \(index + 1). \(optionDescription(option))", type: .detail)
+        }
+
+        let defaultHint: String
+        if let defaultIndex {
+            defaultHint = "[\(defaultIndex + 1)]"
+        } else {
+            defaultHint = ""
+        }
+
+        var attempts = 3
+        while attempts > 0 {
+            Swift.print("➤ Choose an option \(defaultHint): ".cyan, terminator: "")
+            fflush(stdout)
+
+            guard let input = readLine() else {
+                attempts -= 1
+                continue
+            }
+
+            let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if trimmed.isEmpty, let defaultIndex {
+                return options[defaultIndex]
+            }
+
+            if let index = Int(trimmed), options.indices.contains(index - 1) {
+                return options[index - 1]
+            }
+
+            attempts -= 1
+            Console.print("Select a valid option number.", type: .warning)
+        }
+
+        if let defaultIndex {
+            return options[defaultIndex]
+        }
+
+        return nil
     }
 
     public static func clear() {
@@ -203,6 +365,10 @@ public enum Console {
         if current == total {
             Swift.print()
         }
+    }
+
+    public static func progress(total: Int, message: String, width: Int = 40) -> Progress {
+        return Progress(total: total, baseMessage: message, width: width)
     }
 
     public static func printBoxed(_ message: String, style: BoxStyle = .rounded) {
@@ -294,6 +460,39 @@ public enum Console {
             case .thick:
                 return ("┏", "┓", "┗", "┛", "━", "┃")
             }
+        }
+    }
+
+    public final class Progress {
+        private let total: Int
+        private let width: Int
+        private let baseMessage: String
+        private var current: Int = 0
+
+        init(total: Int, baseMessage: String, width: Int) {
+            self.total = max(total, 1)
+            self.baseMessage = baseMessage
+            self.width = width
+        }
+
+        public func advance(by value: Int = 1, message: String? = nil) {
+            current = min(total, current + value)
+            Console.printProgressBar(
+                current: current,
+                total: total,
+                message: message ?? baseMessage,
+                width: width
+            )
+        }
+
+        public func finish(message: String? = nil) {
+            current = total
+            Console.printProgressBar(
+                current: current,
+                total: total,
+                message: message ?? baseMessage,
+                width: width
+            )
         }
     }
 }

@@ -71,8 +71,12 @@ public struct ResetSpmCommand: AsyncParsableCommand {
 
         if !force {
             Console.newLine()
-            Console.print("Are you sure you want to delete these Package.resolved files? (y/N): ", type: .info)
-            if let input = readLine(), input.lowercased() != "y" && input.lowercased() != "yes" {
+            let confirmed = Console.confirm(
+                "Delete these Package.resolved files?",
+                defaultAnswer: false
+            )
+
+            if !confirmed {
                 Console.print("Operation cancelled", type: .info)
                 return
             }
@@ -81,11 +85,17 @@ public struct ResetSpmCommand: AsyncParsableCommand {
         Console.printStep(2, total: 3, message: "Deleting Package.resolved files...")
         var deletedCount = 0
         var failedCount = 0
+        let progress = verbose ? nil : Console.progress(
+            total: resolvedFiles.count,
+            message: "Removing Package.resolved files"
+        )
 
         for file in resolvedFiles {
             do {
                 try file.delete()
                 deletedCount += 1
+                progress?.advance(message: getRelativePath(file: file, basePath: searchPath))
+
                 if verbose {
                     let relativePath = getRelativePath(file: file, basePath: searchPath)
                     Console.print("✓ Deleted: \(relativePath)", type: .success)
@@ -93,9 +103,12 @@ public struct ResetSpmCommand: AsyncParsableCommand {
             } catch {
                 failedCount += 1
                 let relativePath = getRelativePath(file: file, basePath: searchPath)
+                progress?.advance(message: relativePath)
                 Console.print("✗ Failed to delete: \(relativePath) - \(error.localizedDescription)", type: .error)
             }
         }
+
+        progress?.finish()
 
         Console.printStep(3, total: 3, message: "Cleanup completed")
         Console.newLine()

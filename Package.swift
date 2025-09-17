@@ -115,7 +115,9 @@ let package = Package(
         // App Icon Generator module
         .target(
             name: "AppIconGenerator",
-            dependencies: []
+            dependencies: [
+                "Utilities"
+            ]
         ),
 
         // Package Generator module
