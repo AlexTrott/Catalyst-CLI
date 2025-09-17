@@ -106,6 +106,9 @@ public struct NewCommand: AsyncParsableCommand {
     @Flag(name: .shortAndLong, help: "Enable verbose output")
     public var verbose: Bool = false
 
+    @Flag(name: .long, help: "Skip dependency discovery for faster module creation")
+    public var skipDependencyDiscovery: Bool = false
+
     public init() {}
 
     public mutating func run() async throws {
@@ -127,8 +130,12 @@ public struct NewCommand: AsyncParsableCommand {
         var configuration = try createModuleConfiguration(targetPath: targetPath, config: catalystConfig)
 
         let selectedDependencies: [LocalPackageDependency]
-        if catalystConfig.skipDependencyResolver == true {
-            Console.print("Skipping dependency discovery based on configuration.", type: .detail)
+        if skipDependencyDiscovery || catalystConfig.skipDependencyResolver == true {
+            if skipDependencyDiscovery {
+                Console.print("Skipping dependency discovery (--skip-dependency-discovery flag).", type: .detail)
+            } else {
+                Console.print("Skipping dependency discovery based on configuration.", type: .detail)
+            }
             selectedDependencies = []
         } else {
             let dependencySelector = DependencySelector(configuration: catalystConfig)

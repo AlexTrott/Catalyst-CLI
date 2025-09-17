@@ -2,12 +2,12 @@ import Foundation
 import PathKit
 import Utilities
 
-struct LocalPackageProduct {
+struct LocalPackageProduct: Codable {
     let name: String
     let targets: [String]
 }
 
-struct LocalPackageTarget {
+struct LocalPackageTarget: Codable {
     let name: String
     let type: String?
 }
@@ -71,6 +71,9 @@ final class LocalPackageDiscovery: LocalPackageDiscovering {
         ".vscode",
         ".idea"
     ]
+    private let packageCache = PackageCache()
+    private let maxConcurrentDescribes = 6
+    private let queue = DispatchQueue(label: "com.catalyst.packagediscovery", attributes: .concurrent)
 
     func discoverPackages() -> [DiscoveredPackage] {
         guard Shell.exists("swift") else {
@@ -84,7 +87,67 @@ final class LocalPackageDiscovery: LocalPackageDiscovering {
         let packageDirectories = findPackageDirectories(at: Path(rootPath))
             .filter { $0 != rootPackagePath }
 
-        return packageDirectories.compactMap { describePackage(at: $0) }
+        if #available(macOS 10.15, *) {
+            // Use async/parallel processing for better performance
+            return discoverPackagesAsync(from: packageDirectories)
+        } else {
+            // Fallback to sequential processing for older macOS
+            return discoverPackagesSequential(from: packageDirectories)
+        }
+    }
+
+    @available(macOS 10.15, *)
+    private func discoverPackagesAsync(from directories: [Path]) -> [DiscoveredPackage] {
+        let group = DispatchGroup()
+        var results: [DiscoveredPackage] = []
+        var resultsLock = NSLock()
+        let semaphore = DispatchSemaphore(value: maxConcurrentDescribes)
+
+        for directory in directories {
+            group.enter()
+            queue.async { [weak self] in
+                guard let self = self else {
+                    group.leave()
+                    return
+                }
+
+                semaphore.wait()
+                defer {
+                    semaphore.signal()
+                    group.leave()
+                }
+
+                // Check cache first
+                if let cached = self.packageCache.getCachedPackage(at: directory) {
+                    resultsLock.lock()
+                    results.append(cached)
+                    resultsLock.unlock()
+                    return
+                }
+
+                // If not in cache, describe the package synchronously
+                if let package = self.describePackage(at: directory) {
+                    resultsLock.lock()
+                    results.append(package)
+                    resultsLock.unlock()
+                }
+            }
+        }
+
+        group.wait()
+        return results
+    }
+
+    private func discoverPackagesSequential(from directories: [Path]) -> [DiscoveredPackage] {
+        return directories.compactMap { directory in
+            // Check cache first
+            if let cached = packageCache.getCachedPackage(at: directory) {
+                return cached
+            }
+
+            // If not in cache, describe the package
+            return describePackage(at: directory)
+        }
     }
 
     private func findPackageDirectories(at path: Path) -> [Path] {
@@ -113,6 +176,7 @@ final class LocalPackageDiscovery: LocalPackageDiscovering {
         return results
     }
 
+
     private func describePackage(at path: Path) -> DiscoveredPackage? {
         do {
             let output = try Shell.run("swift package describe --type json", at: path.string, timeout: 30, silent: true)
@@ -123,12 +187,17 @@ final class LocalPackageDiscovery: LocalPackageDiscovering {
             let products = manifest.products.map { LocalPackageProduct(name: $0.name, targets: $0.targets) }
             let targets = manifest.targets.map { LocalPackageTarget(name: $0.name, type: $0.type) }
 
-            return DiscoveredPackage(
+            let package = DiscoveredPackage(
                 name: manifest.name,
                 path: path.string,
                 products: products,
                 targets: targets
             )
+
+            // Cache the result
+            packageCache.cachePackage(package, at: path)
+
+            return package
         } catch {
             Console.print("⚠️  Could not inspect package at \(path.string): \(error.localizedDescription)", type: .warning)
             return nil

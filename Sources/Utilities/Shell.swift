@@ -102,4 +102,23 @@ public struct Shell {
             )
         }
     }
+
+    @available(macOS 10.15, *)
+    public static func runAsync(
+        _ command: String,
+        at path: String? = nil,
+        timeout: TimeInterval? = nil,
+        silent: Bool = true
+    ) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try run(command, at: path, timeout: timeout, silent: silent)
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 }
