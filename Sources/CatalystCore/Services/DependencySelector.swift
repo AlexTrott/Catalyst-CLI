@@ -50,7 +50,7 @@ final class DependencySelector {
 
         // Handle special 'all' keyword for interface packages
         if input.lowercased().trimmingCharacters(in: .whitespaces) == "all" {
-            let interfaceOptions = orderedOptions.filter { isInterface($0) }
+            let interfaceOptions = displayOrderedOptions.filter { isInterface($0) }
             if !interfaceOptions.isEmpty {
                 let grouped = groupSelections(interfaceOptions)
                 displaySelectedSummary(options: interfaceOptions)
@@ -68,8 +68,8 @@ final class DependencySelector {
         }
 
         let selectedOptions = indexes.compactMap { index -> DependencyOption? in
-            guard index > 0, index <= orderedOptions.count else { return nil }
-            return orderedOptions[index - 1]
+            guard index > 0, index <= displayOrderedOptions.count else { return nil }
+            return displayOrderedOptions[index - 1]
         }
 
         if selectedOptions.isEmpty {
@@ -84,58 +84,46 @@ final class DependencySelector {
         return grouped
     }
 
+    // Store the display-ordered options for selection
+    private var displayOrderedOptions: [DependencyOption] = []
+
     private func displayPackageTable(options: [DependencyOption]) {
-        let columns = [
-            Console.TableColumn(header: "Package", alignment: .left, color: .cyan),
-            Console.TableColumn(header: "Product", alignment: .left, color: .lightCyan),
-            Console.TableColumn(header: "Type", alignment: .center),
-            Console.TableColumn(header: "Path", alignment: .left, color: .lightBlack)
-        ]
+        // Group packages by category and create display-ordered list
+        let categorizedPackages = groupPackagesByCategory(options)
 
-        var rows: [Console.TableRow] = []
-        var currentIsInterface = true
+        // Build the display-ordered options list that matches the table numbering
+        displayOrderedOptions = []
+        for categoryData in categorizedPackages {
+            let categoryOptions = options.filter { $0.category == categoryData.category }
+            let sortedCategoryOptions = categoryOptions.sorted { lhs, rhs in
+                let lhsIsInterface = isInterface(lhs)
+                let rhsIsInterface = isInterface(rhs)
 
-        for option in options {
-            let isInterfacePackage = isInterface(option)
+                if lhsIsInterface != rhsIsInterface {
+                    return lhsIsInterface // Interface packages first
+                }
 
-            // Determine the type and icon
-            let typeInfo = getPackageTypeInfo(option)
-
-            // Check if we're transitioning from Interface to non-Interface
-            if currentIsInterface && !isInterfacePackage {
-                currentIsInterface = false
-                // We'll add visual separation through row styling
+                if lhs.packageName == rhs.packageName {
+                    return lhs.productName < rhs.productName
+                }
+                return lhs.packageName < rhs.packageName
             }
-
-            // Truncate path if too long
-            let displayPath = truncatePath(option.displayPath, maxLength: 30)
-
-            let cells = [
-                option.packageName,
-                option.productName,
-                typeInfo.display,
-                displayPath
-            ]
-
-            let rowStyle: Console.RowStyle = isInterfacePackage ? .highlight : .normal
-            rows.append(Console.TableRow(cells: cells, style: rowStyle))
+            displayOrderedOptions.append(contentsOf: sortedCategoryOptions)
         }
 
-        // Create title with exclusion info
-        let title = createTableTitle()
+        // Create exclusion info if needed
+        let exclusionInfo = lastExcludedCount > 0 ? Console.ExclusionInfo(
+            count: lastExcludedCount,
+            patterns: lastExcludedPatterns,
+            hasWildcards: lastExcludedPatterns.contains { $0.contains("*") }
+        ) : nil
 
-        Console.printTable(
-            columns: columns,
-            rows: rows,
-            title: title,
-            showIndex: true
+        // Display category tables
+        Console.printCategoryTables(
+            categorizedPackages,
+            title: "📦 Available Dependencies" + (lastExcludedCount > 0 ? " (\(lastExcludedCount) excluded)" : ""),
+            exclusionInfo: exclusionInfo
         )
-
-        // Show exclusion info if packages were excluded
-        if lastExcludedCount > 0 {
-            Console.newLine()
-            displayExclusionInfo()
-        }
 
         // Print legend if we have mixed types
         let hasInterfaces = options.contains { isInterface($0) }
@@ -151,68 +139,73 @@ final class DependencySelector {
         }
     }
 
-    private func createTableTitle() -> String {
-        let baseTitle = "📦 Available Dependencies"
-        if lastExcludedCount > 0 {
-            return "\(baseTitle) (\(lastExcludedCount) excluded)"
-        } else {
-            return baseTitle
-        }
-    }
+    private func groupPackagesByCategory(_ options: [DependencyOption]) -> [Console.CategoryTableData] {
+        // Group packages by category
+        let grouped = Dictionary(grouping: options) { $0.category }
 
-    private func displayExclusionInfo() {
-        let columns = [
-            Console.TableColumn(header: "Exclusion Summary", alignment: .left, color: .yellow)
-        ]
+        var categoryData: [Console.CategoryTableData] = []
+        var currentIndex = 1
 
-        var rows: [Console.TableRow] = []
+        // Process categories in preferred order: Shared, Core, Feature, Unknown
+        let categoryOrder: [PackageCategory] = [.shared, .core, .feature, .unknown]
 
-        // Show excluded count
-        rows.append(Console.TableRow(
-            cells: ["🚫 \(lastExcludedCount) packages excluded by configuration"],
-            style: .warning
-        ))
+        for category in categoryOrder {
+            guard let packages = grouped[category], !packages.isEmpty else { continue }
 
-        // Show exclusion patterns
-        let patternsText = "Exclusion patterns: " + lastExcludedPatterns.joined(separator: ", ")
-        rows.append(Console.TableRow(
-            cells: [patternsText],
-            style: .warning
-        ))
+            // Sort packages within category: Interfaces first, then by name
+            let sortedPackages = packages.sorted { lhs, rhs in
+                let lhsIsInterface = isInterface(lhs)
+                let rhsIsInterface = isInterface(rhs)
 
-        // Show pattern matching info
-        if lastExcludedPatterns.contains(where: { $0.contains("*") }) {
-            rows.append(Console.TableRow(
-                cells: ["💡 Using wildcard matching (*) for flexible exclusions"],
-                style: .normal
+                if lhsIsInterface != rhsIsInterface {
+                    return lhsIsInterface // Interface packages first
+                }
+
+                if lhs.packageName == rhs.packageName {
+                    return lhs.productName < rhs.productName
+                }
+                return lhs.packageName < rhs.packageName
+            }
+
+            // Convert to row data
+            let rowData = sortedPackages.enumerated().map { index, option in
+                let typeInfo = getPackageTypeInfo(option)
+                return Console.PackageRowData(
+                    index: currentIndex + index,
+                    packageName: option.packageName,
+                    productName: option.productName,
+                    type: typeInfo.display,
+                    categoryPath: option.categoryPath,
+                    isExcluded: false,
+                    isInterface: isInterface(option)
+                )
+            }
+
+            categoryData.append(Console.CategoryTableData(
+                category: category,
+                packages: rowData,
+                startIndex: currentIndex
             ))
+
+            currentIndex += sortedPackages.count
         }
 
-        Console.printTable(
-            columns: columns,
-            rows: rows,
-            showIndex: false
-        )
+        return categoryData
     }
+
 
     private func displaySelectedSummary(options: [DependencyOption]) {
         Console.newLine()
 
-        let columns = [
-            Console.TableColumn(header: "Selected Dependencies", alignment: .left, color: .green)
-        ]
-
-        let rows = options.map { option in
+        let summaryRows = options.map { option in
             let typeInfo = getPackageTypeInfo(option)
-            let summary = "\(typeInfo.icon) \(option.packageName)/\(option.productName)"
-            return Console.TableRow(cells: [summary], style: .success)
+            return ["\(typeInfo.icon) \(option.packageName)/\(option.productName)"]
         }
 
-        Console.printTable(
-            columns: columns,
-            rows: rows,
-            title: "✅ Selection Summary",
-            showIndex: false
+        Console.printLegacyTable(
+            columns: ["Selected Dependencies"],
+            rows: summaryRows,
+            title: "✅ Selection Summary"
         )
 
         Console.print("Dependencies will be added to your module.", type: .success)

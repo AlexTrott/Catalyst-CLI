@@ -47,7 +47,10 @@ let package = Package(
         .package(url: "https://github.com/JohnSundell/Files", from: "4.3.0"),
 
         // DocC documentation generation
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.0")
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.0"),
+
+        // Table formatting for enhanced UI
+        .package(url: "https://github.com/scottrhoyt/SwiftyTextTable", from: "0.9.0")
     ],
     targets: [
         // Main executable target
@@ -148,7 +151,8 @@ let package = Package(
                 .product(name: "Rainbow", package: "Rainbow"),
                 .product(name: "SwiftShell", package: "SwiftShell"),
                 .product(name: "Files", package: "Files"),
-                .product(name: "PathKit", package: "PathKit")
+                .product(name: "PathKit", package: "PathKit"),
+                .product(name: "SwiftyTextTable", package: "SwiftyTextTable")
             ]
         ),
 

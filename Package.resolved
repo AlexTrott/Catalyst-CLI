@@ -1,5 +1,5 @@
 {
-  "originHash" : "ded4082063baa40e2b44de234cc3bf1879bf3843961bb84f6427e98a5ec9a34b",
+  "originHash" : "6957a0bd7f04b56cc33d53787dc40d5f4ea9726d8b7821b252ceabc8fb37b4ff",
   "pins" : [
     {
       "identity" : "aexml",
@@ -107,6 +107,15 @@
       "state" : {
         "revision" : "99680b2efc7c7dbcace1da0b3979d266f02e213c",
         "version" : "5.1.0"
+      }
+    },
+    {
+      "identity" : "swiftytexttable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/scottrhoyt/SwiftyTextTable",
+      "state" : {
+        "revision" : "c6df6cf533d120716bff38f8ff9885e1ce2a4ac3",
+        "version" : "0.9.0"
       }
     },
     {

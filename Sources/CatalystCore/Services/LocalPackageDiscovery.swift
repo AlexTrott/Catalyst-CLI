@@ -35,12 +35,18 @@ struct DiscoveredPackage {
 
             let relativePath = relativePath(from: Path(basePath).absolute(), to: Path(path).absolute())
 
+            // Determine package category based on path
+            let category = categorizePackage(path: relativePath)
+            let categoryPath = createCategoryPath(fullPath: relativePath, category: category)
+
             return DependencyOption(
                 packageName: name,
                 packagePath: path,
                 productName: product.name,
                 displayPath: relativePath.isEmpty ? "." : relativePath,
-                availableProducts: availableProducts
+                availableProducts: availableProducts,
+                category: category,
+                categoryPath: categoryPath
             )
         }
     }
@@ -52,6 +58,49 @@ struct DependencyOption {
     let productName: String
     let displayPath: String
     let availableProducts: [String]
+    let category: PackageCategory
+    let categoryPath: String
+}
+
+
+// Helper functions for package categorization
+private func categorizePackage(path: String) -> PackageCategory {
+    let normalizedPath = path.replacingOccurrences(of: "\\", with: "/")
+
+    if normalizedPath.contains("Modules/Core") {
+        return .core
+    } else if normalizedPath.contains("Modules/Shared") {
+        return .shared
+    } else if normalizedPath.contains("Modules/Features") {
+        return .feature
+    } else {
+        return .unknown
+    }
+}
+
+private func createCategoryPath(fullPath: String, category: PackageCategory) -> String {
+    let normalizedPath = fullPath.replacingOccurrences(of: "\\", with: "/")
+
+    let basePattern: String
+    switch category {
+    case .core:
+        basePattern = "Modules/Core"
+    case .shared:
+        basePattern = "Modules/Shared"
+    case .feature:
+        basePattern = "Modules/Features"
+    case .unknown:
+        return fullPath
+    }
+
+    // Remove the base pattern to show relative path within category
+    if let range = normalizedPath.range(of: basePattern) {
+        let remainingPath = String(normalizedPath[range.upperBound...])
+        let trimmedPath = remainingPath.hasPrefix("/") ? String(remainingPath.dropFirst()) : remainingPath
+        return trimmedPath.isEmpty ? "." : trimmedPath
+    }
+
+    return fullPath
 }
 
 protocol LocalPackageDiscovering {
