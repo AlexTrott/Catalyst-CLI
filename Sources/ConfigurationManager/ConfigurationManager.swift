@@ -123,6 +123,11 @@ public struct CatalystConfiguration: Codable {
     public var skipDependencyResolver: Bool?
     public var dependencyExclusions: [String]?
 
+    // MARK: - Test Plan Settings
+    public var shouldAddTestTargetsToTestPlan: Bool?
+    public var packageTestTargetPath: String?
+    public var microAppTestTargetPath: String?
+
     // MARK: - Path Settings
     public var defaultModulesPath: String?
     public var paths: ModulePaths
@@ -144,7 +149,10 @@ public struct CatalystConfiguration: Codable {
         dependencyExclusions: [String]? = nil,
         defaultModulesPath: String? = nil,
         paths: ModulePaths = .default,
-        brewPackages: [String]? = nil
+        brewPackages: [String]? = nil,
+        shouldAddTestTargetsToTestPlan: Bool? = nil,
+        packageTestTargetPath: String? = nil,
+        microAppTestTargetPath: String? = nil
     ) {
         self.author = author
         self.organizationName = organizationName
@@ -160,6 +168,9 @@ public struct CatalystConfiguration: Codable {
         self.defaultModulesPath = defaultModulesPath
         self.paths = paths
         self.brewPackages = brewPackages
+        self.shouldAddTestTargetsToTestPlan = shouldAddTestTargetsToTestPlan
+        self.packageTestTargetPath = packageTestTargetPath
+        self.microAppTestTargetPath = microAppTestTargetPath
     }
 
     /// Default configuration
@@ -192,7 +203,10 @@ public struct CatalystConfiguration: Codable {
             dependencyExclusions: other.dependencyExclusions ?? self.dependencyExclusions,
             defaultModulesPath: other.defaultModulesPath ?? self.defaultModulesPath,
             paths: mergedPaths(other.paths),
-            brewPackages: other.brewPackages ?? self.brewPackages
+            brewPackages: other.brewPackages ?? self.brewPackages,
+            shouldAddTestTargetsToTestPlan: other.shouldAddTestTargetsToTestPlan ?? self.shouldAddTestTargetsToTestPlan,
+            packageTestTargetPath: other.packageTestTargetPath ?? self.packageTestTargetPath,
+            microAppTestTargetPath: other.microAppTestTargetPath ?? self.microAppTestTargetPath
         )
     }
 
@@ -274,6 +288,12 @@ public struct CatalystConfiguration: Codable {
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
             dependencyExclusions = components.isEmpty ? nil : components
+        case "shouldAddTestTargetsToTestPlan":
+            shouldAddTestTargetsToTestPlan = Bool(value)
+        case "packageTestTargetPath":
+            packageTestTargetPath = value
+        case "microAppTestTargetPath":
+            microAppTestTargetPath = value
         default:
             // Handle nested keys
             if key.contains(".") {
@@ -331,6 +351,15 @@ public struct CatalystConfiguration: Codable {
             for (key, value) in templateVariables {
                 settings["defaultTemplateVariables.\(key)"] = value
             }
+        }
+        if let shouldAddTestTargetsToTestPlan = shouldAddTestTargetsToTestPlan {
+            settings["shouldAddTestTargetsToTestPlan"] = String(shouldAddTestTargetsToTestPlan)
+        }
+        if let packageTestTargetPath = packageTestTargetPath {
+            settings["packageTestTargetPath"] = packageTestTargetPath
+        }
+        if let microAppTestTargetPath = microAppTestTargetPath {
+            settings["microAppTestTargetPath"] = microAppTestTargetPath
         }
 
         return settings

@@ -101,6 +101,15 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
         // Create the MicroApp
         try await createMicroApp(microAppConfig)
 
+        let projectPath = (outputPath as NSString)
+            .appendingPathComponent("\(featureName)App/\(featureName)App.xcodeproj")
+
+        enableMicroAppTestsIfNeeded(
+            config: config,
+            moduleName: featureName,
+            projectPath: projectPath
+        )
+
         // Success message
         Console.printEmoji("✅", message: "MicroApp '\(featureName)App' created successfully!")
         Console.print("Location: \(outputPath)/\(featureName)App", type: .detail)
@@ -136,6 +145,28 @@ public struct CreateMicroAppCommand: AsyncParsableCommand {
         if verbose {
             Console.print("✓ Feature module found: \(featureName)", type: .detail)
             Console.print("✓ Valid Swift package structure", type: .detail)
+        }
+    }
+
+    private func enableMicroAppTestsIfNeeded(config: CatalystConfiguration, moduleName: String, projectPath: String) {
+        guard config.shouldAddTestTargetsToTestPlan == true,
+              let planPath = config.microAppTestTargetPath,
+              !planPath.isEmpty else {
+            return
+        }
+
+        let testTargetName = "\(moduleName)AppUITests"
+        do {
+            try TestPlanManager().enableTestTarget(
+                named: testTargetName,
+                in: planPath,
+                targetPath: projectPath,
+                identifier: testTargetName,
+                entryAttributes: ["parallelizable": true]
+            )
+            Console.print("✓ Enabled \(testTargetName) in test plan \(planPath)", type: .detail)
+        } catch {
+            Console.print("⚠️  Could not enable \(testTargetName) in test plan \(planPath): \(error.localizedDescription)", type: .warning)
         }
     }
 

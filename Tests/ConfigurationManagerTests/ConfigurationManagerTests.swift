@@ -64,6 +64,17 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertEqual(configuration.dependencyExclusions ?? [], ["PackageA", "PackageB"])
     }
 
+    func testSetValueUpdatesTestPlanSettings() {
+        var configuration = CatalystConfiguration()
+        configuration.setValue("true", for: "shouldAddTestTargetsToTestPlan")
+        configuration.setValue("PackagesTests.xctestplan", for: "packageTestTargetPath")
+        configuration.setValue("MicroAppsTests.xctestplan", for: "microAppTestTargetPath")
+
+        XCTAssertEqual(configuration.shouldAddTestTargetsToTestPlan, true)
+        XCTAssertEqual(configuration.packageTestTargetPath, "PackagesTests.xctestplan")
+        XCTAssertEqual(configuration.microAppTestTargetPath, "MicroAppsTests.xctestplan")
+    }
+
     func testAllSettingsIncludesConfiguredValues() {
         var configuration = CatalystConfiguration(
             author: "Jane",
@@ -86,6 +97,24 @@ final class ConfigurationManagerTests: XCTestCase {
         XCTAssertEqual(settings["defaultPlatforms"], ".iOS(.v17)")
         XCTAssertEqual(settings["verbose"], "true")
         XCTAssertEqual(settings["dependencyExclusions"], "PackageA")
+    }
+
+    func testMergedConfigurationPrefersOverrideTestPlanSettings() {
+        let base = CatalystConfiguration(
+            shouldAddTestTargetsToTestPlan: false,
+            packageTestTargetPath: "base.xctestplan",
+            microAppTestTargetPath: "base-microapp.xctestplan"
+        )
+        let override = CatalystConfiguration(
+            shouldAddTestTargetsToTestPlan: true,
+            packageTestTargetPath: "override.xctestplan"
+        )
+
+        let merged = base.merged(with: override)
+
+        XCTAssertEqual(merged.shouldAddTestTargetsToTestPlan, true)
+        XCTAssertEqual(merged.packageTestTargetPath, "override.xctestplan")
+        XCTAssertEqual(merged.microAppTestTargetPath, "base-microapp.xctestplan")
     }
 
     func testSaveAndLoadConfigurationRoundTrip() throws {

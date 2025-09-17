@@ -143,9 +143,9 @@ public struct NewCommand: AsyncParsableCommand {
 
         // Create the module with fancy progress
         if configuration.type == .microapp {
-            try await createMicroApp(configuration)
+            try await createMicroApp(configuration, catalystConfig: catalystConfig)
         } else {
-            try await createModule(configuration)
+            try await createModule(configuration, catalystConfig: catalystConfig)
         }
 
         // Success celebration
@@ -346,7 +346,7 @@ public struct NewCommand: AsyncParsableCommand {
         }
     }
 
-    private func createModule(_ configuration: ModuleConfiguration) async throws {
+    private func createModule(_ configuration: ModuleConfiguration, catalystConfig: CatalystConfiguration) async throws {
         Console.printStep(2, total: 4, message: "Generating package structure...")
 
         let templateEngine = TemplateEngine()
@@ -354,16 +354,21 @@ public struct NewCommand: AsyncParsableCommand {
 
         // For feature modules, create both the module and MicroApp
         if configuration.type == .feature {
-            try await createFeatureWithMicroApp(configuration, templateEngine: templateEngine, packageGenerator: packageGenerator)
+            try await createFeatureWithMicroApp(configuration, templateEngine: templateEngine, packageGenerator: packageGenerator, catalystConfig: catalystConfig)
         } else {
             // For other module types, use the existing flow
+            let packagePath = (configuration.path as NSString).appendingPathComponent(configuration.name)
             try packageGenerator.generatePackage(configuration)
+            enablePackageTestsIfNeeded(
+                config: catalystConfig,
+                moduleName: configuration.name,
+                packagePath: packagePath
+            )
 
             Console.printStep(3, total: 4, message: "Adding to workspace...")
 
             if let workspacePath = FileManager.default.findWorkspace() {
                 let workspaceManager = WorkspaceManager()
-                let packagePath = (configuration.path as NSString).appendingPathComponent(configuration.name)
 
                 // Determine appropriate group based on module type
                 let groupPath = getWorkspaceGroupPath(for: configuration.type)
@@ -388,7 +393,12 @@ public struct NewCommand: AsyncParsableCommand {
         Console.printStep(4, total: 4, message: "Finalizing setup...")
     }
 
-    private func createFeatureWithMicroApp(_ configuration: ModuleConfiguration, templateEngine: TemplateEngine, packageGenerator: PackageGenerator) async throws {
+    private func createFeatureWithMicroApp(
+        _ configuration: ModuleConfiguration,
+        templateEngine: TemplateEngine,
+        packageGenerator: PackageGenerator,
+        catalystConfig: CatalystConfiguration
+    ) async throws {
         // Create wrapper folder
         let wrapperPath = (configuration.path as NSString).appendingPathComponent(configuration.name)
         try FileManager.default.createDirectory(atPath: wrapperPath, withIntermediateDirectories: true, attributes: nil)
@@ -408,6 +418,12 @@ public struct NewCommand: AsyncParsableCommand {
             localDependencies: configuration.localDependencies
         )
         try packageGenerator.generatePackage(featureConfiguration)
+        let featurePackagePath = (wrapperPath as NSString).appendingPathComponent(configuration.name)
+        enablePackageTestsIfNeeded(
+            config: catalystConfig,
+            moduleName: configuration.name,
+            packagePath: featurePackagePath
+        )
 
         Console.printStep(3, total: 4, message: "Creating companion MicroApp...")
 
@@ -427,6 +443,13 @@ public struct NewCommand: AsyncParsableCommand {
 
         let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
         try microAppGenerator.generateMicroApp(microAppConfig)
+        let microAppXcodeProjPath = (wrapperPath as NSString)
+            .appendingPathComponent("\(configuration.name)App/\(configuration.name)App.xcodeproj")
+        enableMicroAppTestsIfNeeded(
+            config: catalystConfig,
+            moduleName: configuration.name,
+            projectPath: microAppXcodeProjPath
+        )
 
         // Add Feature Module and MicroApp to workspace using feature-specific integration
         if let workspacePath = FileManager.default.findWorkspace() {
@@ -456,7 +479,7 @@ public struct NewCommand: AsyncParsableCommand {
         }
     }
 
-    private func createMicroApp(_ configuration: ModuleConfiguration) async throws {
+    private func createMicroApp(_ configuration: ModuleConfiguration, catalystConfig: CatalystConfiguration) async throws {
         Console.printStep(2, total: 4, message: "Creating MicroApp...")
 
         // Convert ModuleConfiguration to MicroAppConfiguration
@@ -475,6 +498,13 @@ public struct NewCommand: AsyncParsableCommand {
         let templateEngine = TemplateEngine()
         let microAppGenerator = MicroAppGenerator(templateEngine: templateEngine)
         try microAppGenerator.generateMicroApp(microAppConfig)
+        let microAppProjectPath = (configuration.path as NSString)
+            .appendingPathComponent("\(configuration.name)App/\(configuration.name)App.xcodeproj")
+        enableMicroAppTestsIfNeeded(
+            config: catalystConfig,
+            moduleName: configuration.name,
+            projectPath: microAppProjectPath
+        )
 
         Console.printStep(3, total: 4, message: "Configuring project...")
         Console.printStep(4, total: 4, message: "Finalizing setup...")
@@ -490,6 +520,50 @@ public struct NewCommand: AsyncParsableCommand {
             return "Modules/Features"
         case .microapp:
             return "MicroApps"
+        }
+    }
+
+    private func enablePackageTestsIfNeeded(config: CatalystConfiguration, moduleName: String, packagePath: String) {
+        guard config.shouldAddTestTargetsToTestPlan == true,
+              let planPath = config.packageTestTargetPath,
+              !planPath.isEmpty else {
+            return
+        }
+
+        let testTargetName = "\(moduleName)Tests"
+        do {
+            try TestPlanManager().enableTestTarget(
+                named: testTargetName,
+                in: planPath,
+                targetPath: packagePath,
+                identifier: testTargetName,
+                entryAttributes: ["parallelizable": true]
+            )
+            Console.print("✓ Enabled \(testTargetName) in test plan \(planPath)", type: .detail)
+        } catch {
+            Console.print("⚠️  Could not enable \(testTargetName) in test plan \(planPath): \(error.localizedDescription)", type: .warning)
+        }
+    }
+
+    private func enableMicroAppTestsIfNeeded(config: CatalystConfiguration, moduleName: String, projectPath: String) {
+        guard config.shouldAddTestTargetsToTestPlan == true,
+              let planPath = config.microAppTestTargetPath,
+              !planPath.isEmpty else {
+            return
+        }
+
+        let testTargetName = "\(moduleName)AppUITests"
+        do {
+            try TestPlanManager().enableTestTarget(
+                named: testTargetName,
+                in: planPath,
+                targetPath: projectPath,
+                identifier: testTargetName,
+                entryAttributes: ["parallelizable": true]
+            )
+            Console.print("✓ Enabled \(testTargetName) in test plan \(planPath)", type: .detail)
+        } catch {
+            Console.print("⚠️  Could not enable \(testTargetName) in test plan \(planPath): \(error.localizedDescription)", type: .warning)
         }
     }
 }
