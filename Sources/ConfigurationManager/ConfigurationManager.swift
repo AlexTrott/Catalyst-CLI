@@ -119,6 +119,9 @@ public struct CatalystConfiguration: Codable {
     public var verbose: Bool?
     public var colorOutput: Bool?
 
+    // MARK: - Behavior Settings
+    public var skipDependencyResolver: Bool?
+
     // MARK: - Path Settings
     public var defaultModulesPath: String?
     public var paths: ModulePaths
@@ -136,6 +139,7 @@ public struct CatalystConfiguration: Codable {
         defaultPlatforms: [String]? = nil,
         verbose: Bool? = nil,
         colorOutput: Bool? = nil,
+        skipDependencyResolver: Bool? = nil,
         defaultModulesPath: String? = nil,
         paths: ModulePaths = .default,
         brewPackages: [String]? = nil
@@ -149,6 +153,7 @@ public struct CatalystConfiguration: Codable {
         self.defaultPlatforms = defaultPlatforms
         self.verbose = verbose
         self.colorOutput = colorOutput
+        self.skipDependencyResolver = skipDependencyResolver
         self.defaultModulesPath = defaultModulesPath
         self.paths = paths
         self.brewPackages = brewPackages
@@ -161,6 +166,7 @@ public struct CatalystConfiguration: Codable {
             defaultPlatforms: [".iOS(.v15)"],
             verbose: false,
             colorOutput: true,
+            skipDependencyResolver: false,
             defaultModulesPath: ".",
             brewPackages: ["swiftlint", "swiftformat", "xcodes"]
         )
@@ -178,6 +184,7 @@ public struct CatalystConfiguration: Codable {
             defaultPlatforms: other.defaultPlatforms ?? self.defaultPlatforms,
             verbose: other.verbose ?? self.verbose,
             colorOutput: other.colorOutput ?? self.colorOutput,
+            skipDependencyResolver: other.skipDependencyResolver ?? self.skipDependencyResolver,
             defaultModulesPath: other.defaultModulesPath ?? self.defaultModulesPath,
             paths: mergedPaths(other.paths),
             brewPackages: other.brewPackages ?? self.brewPackages

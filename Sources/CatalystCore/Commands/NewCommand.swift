@@ -114,17 +114,26 @@ public struct NewCommand: AsyncParsableCommand {
 
         Console.printHeader("Creating New Module")
 
+        let configManager = ConfigurationManager()
+        let catalystConfig = try configManager.loadConfiguration()
+
         // Resolve target path first
-        let targetPath = try resolveTargetPath()
+        let targetPath = try resolveTargetPath(configuration: catalystConfig)
 
         // Validate inputs
         try validateInputs(targetPath: targetPath)
 
         // Create module configuration
-        var configuration = try createModuleConfiguration(targetPath: targetPath)
+        var configuration = try createModuleConfiguration(targetPath: targetPath, config: catalystConfig)
 
-        let dependencySelector = DependencySelector()
-        let selectedDependencies = dependencySelector.selectDependencies(for: configuration)
+        let selectedDependencies: [LocalPackageDependency]
+        if catalystConfig.skipDependencyResolver == true {
+            Console.print("Skipping dependency discovery based on configuration.", type: .detail)
+            selectedDependencies = []
+        } else {
+            let dependencySelector = DependencySelector()
+            selectedDependencies = dependencySelector.selectDependencies(for: configuration)
+        }
         configuration = configuration.withLocalDependencies(selectedDependencies)
 
         if dryRun {
@@ -162,14 +171,10 @@ public struct NewCommand: AsyncParsableCommand {
         Console.printGradientText("Happy coding! ⚡")
     }
 
-    private func resolveTargetPath() throws -> String {
+    private func resolveTargetPath(configuration: CatalystConfiguration) throws -> String {
         if let explicitPath = path {
             return explicitPath
         }
-
-        // Load configuration to get default paths
-        let configManager = ConfigurationManager()
-        let config = try configManager.loadConfiguration()
 
         guard let moduleType = ModuleType.from(string: moduleType) else {
             return "."
@@ -177,13 +182,13 @@ public struct NewCommand: AsyncParsableCommand {
 
         switch moduleType {
         case .core:
-            return config.paths.coreModules ?? "."
+            return configuration.paths.coreModules ?? "."
         case .shared:
-            return config.paths.sharedModules ?? "./Modules/Shared"
+            return configuration.paths.sharedModules ?? "./Modules/Shared"
         case .feature:
-            return config.paths.featureModules ?? "."
+            return configuration.paths.featureModules ?? "."
         case .microapp:
-            return config.paths.microApps ?? "./MicroApps"
+            return configuration.paths.microApps ?? "./MicroApps"
         }
     }
 
@@ -231,14 +236,10 @@ public struct NewCommand: AsyncParsableCommand {
         }
     }
 
-    private func createModuleConfiguration(targetPath: String) throws -> ModuleConfiguration {
+    private func createModuleConfiguration(targetPath: String, config: CatalystConfiguration) throws -> ModuleConfiguration {
         guard let type = ModuleType.from(string: moduleType) else {
             throw CatalystError.invalidModuleName("Invalid module type")
         }
-
-        // Load configuration from .catalyst.yml
-        let configManager = ConfigurationManager()
-        let config = try configManager.loadConfiguration()
 
         // Parse platforms from configuration
         let platforms = parsePlatforms(from: config.defaultPlatforms) ?? [.iOS(.v16)]

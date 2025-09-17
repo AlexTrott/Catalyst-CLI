@@ -166,6 +166,10 @@ let package = Package(
         .testTarget(
             name: "PackageGeneratorTests",
             dependencies: ["PackageGenerator"]
+        ),
+        .testTarget(
+            name: "ConfigurationManagerTests",
+            dependencies: ["ConfigurationManager"]
         )
     ]
 )

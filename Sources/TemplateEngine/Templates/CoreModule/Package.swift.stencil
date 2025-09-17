@@ -5,17 +5,19 @@ import PackageDescription
 
 let package = Package(
     name: "{{ModuleName}}",
-    platforms: [{% for platform in Platforms %}
-        {{platform}}{% if not forloop.last %},{% endif %}{% endfor %}
+    platforms: [
+{%- for platform in Platforms %}
+        {{platform}}{% if not forloop.last %},{% endif %}
+{%- endfor %}
     ],
     products: [
         .library(name: "{{ModuleName}}Interface", targets: ["{{ModuleName}}Interface"]),
         .library(name: "{{ModuleName}}", targets: ["{{ModuleName}}"])
     ],
     dependencies: [
-{% for dependency in PackageDependencies %}
+{%- for dependency in PackageDependencies %}
         {{dependency}}{% if not forloop.last %},{% endif %}
-{% endfor %}
+{%- endfor %}
     ],
     targets: [
         .target(
@@ -24,9 +26,9 @@ let package = Package(
         .target(
             name: "{{ModuleName}}",
             dependencies: [
-{% for dependency in MainTargetDependencies %}
+{%- for dependency in MainTargetDependencies %}
                 {{dependency}}{% if not forloop.last %},{% endif %}
-{% endfor %}
+{%- endfor %}
             ]
         ),
         .testTarget(
