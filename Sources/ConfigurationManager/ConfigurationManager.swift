@@ -121,6 +121,7 @@ public struct CatalystConfiguration: Codable {
 
     // MARK: - Behavior Settings
     public var skipDependencyResolver: Bool?
+    public var dependencyExclusions: [String]?
 
     // MARK: - Path Settings
     public var defaultModulesPath: String?
@@ -140,6 +141,7 @@ public struct CatalystConfiguration: Codable {
         verbose: Bool? = nil,
         colorOutput: Bool? = nil,
         skipDependencyResolver: Bool? = nil,
+        dependencyExclusions: [String]? = nil,
         defaultModulesPath: String? = nil,
         paths: ModulePaths = .default,
         brewPackages: [String]? = nil
@@ -154,6 +156,7 @@ public struct CatalystConfiguration: Codable {
         self.verbose = verbose
         self.colorOutput = colorOutput
         self.skipDependencyResolver = skipDependencyResolver
+        self.dependencyExclusions = dependencyExclusions
         self.defaultModulesPath = defaultModulesPath
         self.paths = paths
         self.brewPackages = brewPackages
@@ -167,6 +170,7 @@ public struct CatalystConfiguration: Codable {
             verbose: false,
             colorOutput: true,
             skipDependencyResolver: false,
+            dependencyExclusions: nil,
             defaultModulesPath: ".",
             brewPackages: ["swiftlint", "swiftformat", "xcodes"]
         )
@@ -185,6 +189,7 @@ public struct CatalystConfiguration: Codable {
             verbose: other.verbose ?? self.verbose,
             colorOutput: other.colorOutput ?? self.colorOutput,
             skipDependencyResolver: other.skipDependencyResolver ?? self.skipDependencyResolver,
+            dependencyExclusions: other.dependencyExclusions ?? self.dependencyExclusions,
             defaultModulesPath: other.defaultModulesPath ?? self.defaultModulesPath,
             paths: mergedPaths(other.paths),
             brewPackages: other.brewPackages ?? self.brewPackages
@@ -263,6 +268,12 @@ public struct CatalystConfiguration: Codable {
             colorOutput = Bool(value) ?? true
         case "defaultModulesPath":
             defaultModulesPath = value
+        case "dependencyExclusions":
+            let components = value
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            dependencyExclusions = components.isEmpty ? nil : components
         default:
             // Handle nested keys
             if key.contains(".") {
@@ -309,6 +320,9 @@ public struct CatalystConfiguration: Codable {
         }
         if let templatesPath = templatesPath {
             settings["templatesPath"] = templatesPath.joined(separator: ", ")
+        }
+        if let dependencyExclusions = dependencyExclusions {
+            settings["dependencyExclusions"] = dependencyExclusions.joined(separator: ", ")
         }
         if let defaultPlatforms = defaultPlatforms {
             settings["defaultPlatforms"] = defaultPlatforms.joined(separator: ", ")

@@ -131,7 +131,7 @@ public struct NewCommand: AsyncParsableCommand {
             Console.print("Skipping dependency discovery based on configuration.", type: .detail)
             selectedDependencies = []
         } else {
-            let dependencySelector = DependencySelector()
+            let dependencySelector = DependencySelector(configuration: catalystConfig)
             selectedDependencies = dependencySelector.selectDependencies(for: configuration)
         }
         configuration = configuration.withLocalDependencies(selectedDependencies)

@@ -153,7 +153,7 @@ let package = Package(
         // Test targets
         .testTarget(
             name: "CatalystCoreTests",
-            dependencies: ["CatalystCore"]
+            dependencies: ["CatalystCore", "ConfigurationManager"]
         ),
         .testTarget(
             name: "TemplateEngineTests",
@@ -165,11 +165,15 @@ let package = Package(
         ),
         .testTarget(
             name: "PackageGeneratorTests",
-            dependencies: ["PackageGenerator"]
+            dependencies: ["PackageGenerator", "Utilities"]
         ),
         .testTarget(
             name: "ConfigurationManagerTests",
             dependencies: ["ConfigurationManager"]
+        ),
+        .testTarget(
+            name: "UtilitiesTests",
+            dependencies: ["Utilities"]
         )
     ]
 )

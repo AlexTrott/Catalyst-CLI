@@ -54,7 +54,11 @@ struct DependencyOption {
     let availableProducts: [String]
 }
 
-final class LocalPackageDiscovery {
+protocol LocalPackageDiscovering {
+    func discoverPackages() -> [DiscoveredPackage]
+}
+
+final class LocalPackageDiscovery: LocalPackageDiscovering {
     private let fileManager = FileManager.default
     private let excludedDirectories: Set<String> = [
         ".git",
