@@ -393,7 +393,7 @@ public enum Console {
         Swift.print("\(bottomLeft)\(String(repeating: horizontal, count: maxLength + padding * 2))\(bottomRight)".cyan)
     }
 
-    private static func visualLength(_ text: String) -> Int {
+    static func visualLength(_ text: String) -> Int {
         // Calculate the visual length of text, accounting for emojis
         // Emojis typically take 2 character widths in terminal
         var length = 0
