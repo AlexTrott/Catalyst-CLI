@@ -64,3 +64,5 @@ fastlane/test_output
 /.swiftpm
 /.DS_Store
 /Sources/CatalystCore/CatalystCore.docc
+/Test Project
+/Sources/.DS_Store
